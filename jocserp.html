@@ -1,226 +1,526 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Joc de la Serp</title>
   <style>
+    :root{
+      --canvas-w:400px;
+      --canvas-h:400px;
+    }
     body {
-      text-align: center;
-      font-family: sans-serif;
-      background-color: #f0f0f0;
       margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:#f0f0f0;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+      padding:18px 8px;
     }
 
+    h1 { margin:0; color:#333; font-size:20px; }
+
+    #gameWrap{ position:relative; width:var(--canvas-w); }
     canvas {
-      background-color: #222;
-      display: block;
-      margin: 20px auto;
-      border: 2px solid #555;
-    }
-
-    h1 {
-      color: #333;
-      margin-top: 20px;
+      background:#222;
+      display:block;
+      border:2px solid #555;
+      width:100%;
+      height:auto;
     }
 
     #score {
-      font-size: 1.2em;
-      color: #444;
+      color:#444;
+      font-size:14px;
+      margin:6px 0 0 0;
     }
 
+    /* Botons posicionats sobre el canvas (apareixen/desapareixen) */
     .canvas-button {
-      position: absolute;
-      background-color: #fff;
-      border: none;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      z-index: 5;
+      position:absolute;
+      background:#fff;
+      color:#111;
+      border:1px solid #888;
+      padding:8px 12px;
+      font-size:14px;
+      cursor:pointer;
+      border-radius:6px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.25);
+      user-select:none;
+      z-index:10;
     }
 
-    #startButton, #pauseContinue, #pauseReset {
-      display: none;
+    .hidden{ display:none; }
+
+    /* Indicador de velocitat seleccionat (dins canvas es dibuixa també) */
+    .speed-dot {
+      width:12px; height:12px; border-radius:50%; display:inline-block; margin-left:8px;
+      border:2px solid rgba(255,255,255,0.6);
     }
   </style>
 </head>
 <body>
   <h1>🐍 Joc de la Serp</h1>
-  <canvas id="gameCanvas" width="400" height="400"></canvas>
+  <div id="gameWrap">
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+    <!-- Botons reals, posicionats per JS perquè siguin clicables i accessibles -->
+    <button id="startButton" class="canvas-button hidden" aria-label="Jugar">▶️ Jugar</button>
+
+    <button id="pauseContinue" class="canvas-button hidden" aria-label="Continuar">🔄 Continuar</button>
+    <button id="pauseReset" class="canvas-button hidden" aria-label="Reiniciar">🔁 Reiniciar</button>
+  </div>
+
   <p id="score">Puntuació: 0</p>
 
-  <button id="startButton" class="canvas-button">▶️ Jugar</button>
-  <button id="pauseContinue" class="canvas-button">🔄 Continuar</button>
-  <button id="pauseReset" class="canvas-button">🔁 Reiniciar</button>
-
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+/* Joc de la serp - fitxer complet
+   Funcionalitats:
+   - Menú d'inici dins el canvas amb selector de velocitat (clicable dins el canvas)
+   - Botó Jugar real (sobre el canvas)
+   - Menú pausa dins el canvas; botons Continuar i Reiniciar reals
+   - Reiniciar porta al menú d'inici
+   - Serp comença amb 2 segments, ulls orientats segons direcció
+*/
 
-    const gridSize = 20;
-    const tileCount = canvas.width / gridSize;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('gameWrap');
+const scoreEl = document.getElementById('score');
 
-    let snake = [];
-    let direction = { x: 0, y: 0 };
-    let apple = { x: 5, y: 5 };
-    let score = 0;
-    let gameInterval = null;
-    let paused = false;
-    let gameStarted = false;
-    let snakeSpeed = 200;
+const startButton = document.getElementById('startButton');
+const pauseContinue = document.getElementById('pauseContinue');
+const pauseReset = document.getElementById('pauseReset');
 
-    const startButton = document.getElementById("startButton");
-    const pauseContinue = document.getElementById("pauseContinue");
-    const pauseReset = document.getElementById("pauseReset");
+const gridSize = 20;
+const tileCountX = canvas.width / gridSize;
+const tileCountY = canvas.height / gridSize;
 
-    function initSnake() {
-      snake = [
-        { x: 10, y: 10 },
-        { x: 9, y: 10 }
+let snake = [];
+let direction = {x:0,y:0};
+let nextDirection = {x:0,y:0}; // per evitar girs invalids entre ticks
+let apple = {x:5,y:5};
+let score = 0;
+let gameInterval = null;
+let paused = false;
+let gameStarted = false;
+
+// velocitats en ms
+const SPEEDS = { slow:300, normal:200, fast:100 };
+let selectedSpeedKey = 'normal';
+let snakeSpeed = SPEEDS[selectedSpeedKey];
+
+// coordenades rect de menú inicial i pausa (dins canvas)
+const startMenuRect = { x:50, y:80, w:300, h:240 };
+const pauseMenuRect = { x:50, y:100, w:300, h:200 };
+
+// Inici/Reset helpers
+function initSnake(){
+  snake = [ {x:10,y:10}, {x:9,y:10} ];
+  direction = {x:0,y:0};
+  nextDirection = {x:0,y:0};
+  score = 0;
+  scoreEl.textContent = 'Puntuació: 0';
+}
+
+function placeApple(){
+  // col·loca poma evitant la serp
+  let tries = 0;
+  do {
+    apple.x = Math.floor(Math.random() * tileCountX);
+    apple.y = Math.floor(Math.random() * tileCountY);
+    tries++;
+    if(tries>200) break;
+  } while (snake.some(s=>s.x===apple.x && s.y===apple.y));
+}
+
+function startGame(){
+  gameStarted = true;
+  paused = false;
+  hideButtons();
+  initSnake();
+  placeApple();
+  // arrenca amb moviment cap a la dreta
+  direction = {x:1,y:0};
+  nextDirection = {x:1,y:0};
+  runInterval();
+}
+
+function runInterval(){
+  if(gameInterval) clearInterval(gameInterval);
+  gameInterval = setInterval(gameLoop, snakeSpeed);
+}
+
+function pauseGame(){
+  if(!gameStarted || paused) return;
+  paused = true;
+  if(gameInterval) clearInterval(gameInterval);
+  showPauseMenu();
+}
+
+function resumeGame(){
+  if(!gameStarted || !paused) return;
+  paused = false;
+  hideButtons();
+  runInterval();
+}
+
+function resetToMenu(){
+  if(gameInterval) clearInterval(gameInterval);
+  gameStarted = false;
+  paused = false;
+  hideButtons();
+  draw(); // dibuixa l'estat actual (menu d'inici dins canvas)
+  drawStartMenu();
+  positionStartButton();
+  showStartButton();
+}
+
+// core loop
+function gameLoop(){
+  // aplicar direcció pendent
+  if(nextDirection.x !== direction.x || nextDirection.y !== direction.y){
+    // impedir gir directe 180 graus
+    if(!(nextDirection.x === -direction.x && nextDirection.y === -direction.y)){
+      direction = {...nextDirection};
+    }
+  }
+
+  // si la direcció és zero, no movem (per evitar que es mogui abans de començar)
+  if(direction.x === 0 && direction.y === 0) return;
+
+  const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+  // col·lisions amb paret o amb el cos
+  if(head.x < 0 || head.x >= tileCountX || head.y < 0 || head.y >= tileCountY ||
+     snake.some(p => p.x === head.x && p.y === head.y)){
+    // quan mor, tornem al menú d'inici
+    resetToMenu();
+    return;
+  }
+
+  snake.unshift(head);
+
+  if(head.x === apple.x && head.y === apple.y){
+    score++;
+    scoreEl.textContent = 'Puntuació: ' + score;
+    placeApple();
+  } else {
+    snake.pop();
+  }
+
+  draw();
+}
+
+// Dibuix del joc i menús integrats en el canvas
+function draw(){
+  // fons
+  ctx.fillStyle = '#222';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // serpent
+  for(let i=0;i<snake.length;i++){
+    const p = snake[i];
+    ctx.fillStyle = '#0f0';
+    ctx.fillRect(p.x * gridSize, p.y * gridSize, gridSize-2, gridSize-2);
+  }
+
+  // ulls orientats segons direction (si la serp existeix)
+  if(snake.length>0){
+    const head = snake[0];
+    const cellX = head.x * gridSize;
+    const cellY = head.y * gridSize;
+    const eyeSize = 4;
+    // posicions relatives per cada direcció
+    let e1 = {x: cellX + 2, y: cellY + 4};
+    let e2 = {x: cellX + 2, y: cellY + 12};
+
+    if(direction.x === 1){ // dreta
+      e1 = {x: cellX + (gridSize - 6), y: cellY + 4};
+      e2 = {x: cellX + (gridSize - 6), y: cellY + 12};
+    } else if(direction.x === -1){ // esquerra
+      e1 = {x: cellX + 2, y: cellY + 4};
+      e2 = {x: cellX + 2, y: cellY + 12};
+    } else if(direction.y === -1){ // amunt
+      e1 = {x: cellX + 6, y: cellY + 2};
+      e2 = {x: cellX + 14, y: cellY + 2};
+    } else if(direction.y === 1){ // avall
+      e1 = {x: cellX + 6, y: cellY + (gridSize - 6)};
+      e2 = {x: cellX + 14, y: cellY + (gridSize - 6)};
+    } else {
+      // quiet: mirar a la dreta per defecte (si vols esquerra, canvia)
+      e1 = {x: cellX + 2, y: cellY + 4};
+      e2 = {x: cellX + 2, y: cellY + 12};
+    }
+
+    ctx.fillStyle = '#00f';
+    ctx.fillRect(e1.x, e1.y, eyeSize, eyeSize);
+    ctx.fillRect(e2.x, e2.y, eyeSize, eyeSize);
+  }
+
+  // poma
+  ctx.fillStyle = '#f00';
+  ctx.fillRect(apple.x * gridSize, apple.y * gridSize, gridSize-2, gridSize-2);
+
+  // si no ha començat, dibuixar el menú d'inici
+  if(!gameStarted){
+    drawStartMenu();
+  }
+
+  // si està en pausa, dibuixar el menú de pausa
+  if(paused){
+    drawPauseMenu();
+  }
+}
+
+// Dibuixar menú d'inici dins canvas amb selector de velocitat (clicable)
+function drawStartMenu(){
+  // fons semitransparent
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(startMenuRect.x, startMenuRect.y, startMenuRect.w, startMenuRect.h);
+
+  // text
+  ctx.fillStyle = '#fff';
+  ctx.font = '18px system-ui, sans-serif';
+  ctx.fillText('Benvingut al joc de la serp!', startMenuRect.x + 24, startMenuRect.y + 36);
+
+  ctx.font = '14px system-ui, sans-serif';
+  ctx.fillText('Selecciona la velocitat:', startMenuRect.x + 24, startMenuRect.y + 72);
+
+  // icones de velocitat i caixes per seleccionar
+  const baseY = startMenuRect.y + 110;
+  const cx = startMenuRect.x + 50;
+  const gap = 80;
+  // slow
+  ctx.fillStyle = (selectedSpeedKey === 'slow') ? '#3a8' : '#fff';
+  drawSpeedBox(cx, baseY, '🐢', 'slow');
+  // normal
+  ctx.fillStyle = (selectedSpeedKey === 'normal') ? '#3a8' : '#fff';
+  drawSpeedBox(cx + gap, baseY, '⚖️', 'normal');
+  // fast
+  ctx.fillStyle = (selectedSpeedKey === 'fast') ? '#3a8' : '#fff';
+  drawSpeedBox(cx + gap*2, baseY, '🚀', 'fast');
+
+  // instruccions petites
+  ctx.fillStyle = '#ccc';
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.fillText('Fes clic sobre una icona per canviar la velocitat.', startMenuRect.x + 28, startMenuRect.y + startMenuRect.h - 32);
+
+  // posicionar i mostrar botó Jugar (HTML) sota el menú
+  positionStartButton();
+  showStartButton();
+}
+
+// Quadre individual de velocitat (dibuix dins canvas)
+function drawSpeedBox(x,y(icon), icon, key){
+  // rectangle
+  const w = 54, h = 48;
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillRect(x, y, w, h);
+  // bordes si seleccionat
+  if(selectedSpeedKey === key){
+    ctx.strokeStyle = '#7af';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x+1, y+1, w-2, h-2);
+  }
+  // dibuixar icon centrat
+  ctx.font = '22px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(icon, x + w/2, y + h/2 - 2);
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'alphabetic';
+}
+
+// Dibuixar menú de pausa dins canvas
+function drawPauseMenu(){
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(pauseMenuRect.x, pauseMenuRect.y, pauseMenuRect.w, pauseMenuRect.h);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '20px system-ui, sans-serif';
+  ctx.fillText('⏸ Joc en pausa', pauseMenuRect.x + 80, pauseMenuRect.y + 42);
+
+  ctx.font = '18px system-ui, sans-serif';
+  ctx.fillText('Puntuació', pauseMenuRect.x + 120, pauseMenuRect.y + 88);
+  ctx.font = '34px system-ui, sans-serif';
+  ctx.fillStyle = '#7af';
+  ctx.fillText(String(score), pauseMenuRect.x + 160, pauseMenuRect.y + 130);
+
+  // posicionar i mostrar els botons reals sota el menu
+  positionPauseButtons();
+  showPauseButtons();
+}
+
+// Posicionament botó Jugar sota canvas (centre)
+function positionStartButton(){
+  const rect = canvas.getBoundingClientRect();
+  const left = rect.left + (startMenuRect.x + startMenuRect.w/2) - 40;
+  const top = rect.top + startMenuRect.y + startMenuRect.h - 48;
+  startButton.style.left = Math.round(left) + 'px';
+  startButton.style.top  = Math.round(top)  + 'px';
+}
+
+// Mostrar/Amagar botons
+function showStartButton(){ startButton.classList.remove('hidden'); }
+function hideStartButton(){ startButton.classList.add('hidden'); }
+
+function positionPauseButtons(){
+  const rect = canvas.getBoundingClientRect();
+  const leftC = rect.left + pauseMenuRect.x + 40;
+  const leftR = rect.left + pauseMenuRect.x + pauseMenuRect.w - 120;
+  const top = rect.top + pauseMenuRect.y + pauseMenuRect.h - 56;
+  pauseContinue.style.left = Math.round(leftC) + 'px';
+  pauseContinue.style.top  = Math.round(top) + 'px';
+  pauseReset.style.left    = Math.round(leftR) + 'px';
+  pauseReset.style.top     = Math.round(top) + 'px';
+}
+
+function showPauseButtons(){
+  pauseContinue.classList.remove('hidden');
+  pauseReset.classList.remove('hidden');
+}
+function hidePauseButtons(){
+  pauseContinue.classList.add('hidden');
+  pauseReset.classList.add('hidden');
+}
+
+function showPauseMenu(){
+  // dibuixar i posicionar
+  draw();
+  drawPauseMenu();
+}
+
+function hideButtons(){
+  startButton.classList.add('hidden');
+  pauseContinue.classList.add('hidden');
+  pauseReset.classList.add('hidden');
+}
+
+// Gestió de clics dins el canvas (selecció velocitat i iniciar si no ha començat)
+canvas.addEventListener('click', (ev)=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((ev.clientX - rect.left));
+  const y = Math.floor((ev.clientY - rect.top));
+
+  // si no ha començat i click dins startMenu -> comprovar selecció de velocitat
+  if(!gameStarted){
+    if(pointInside(x,y, startMenuRect)){
+      // detectar quina icona s'ha clicat
+      const baseY = startMenuRect.y + 110;
+      const cx = startMenuRect.x + 50;
+      const gap = 80;
+      const boxes = [
+        {key:'slow', x:cx, y:baseY, w:54, h:48},
+        {key:'normal', x:cx+gap, y:baseY, w:54, h:48},
+        {key:'fast', x:cx+gap*2, y:baseY, w:54, h:48}
       ];
-      direction = { x: 0, y: 0 };
-      score = 0;
-      document.getElementById("score").textContent = "Puntuació: 0";
-    }
-
-    function startGame() {
-      gameStarted = true;
-      hideButtons();
-      initSnake();
-      placeApple();
-      direction = { x: 1, y: 0 };
-      gameInterval = setInterval(gameLoop, snakeSpeed);
-    }
-
-    function pauseGame() {
-      if (!paused) {
-        paused = true;
-        clearInterval(gameInterval);
-        showPauseMenu();
-      }
-    }
-
-    function resumeGame() {
-      if (paused) {
-        paused = false;
-        hideButtons();
-        gameInterval = setInterval(gameLoop, snakeSpeed);
-      }
-    }
-
-    function resetToMenu() {
-      clearInterval(gameInterval);
-      gameStarted = false;
-      paused = false;
-      hideButtons();
-      drawStartMenu();
-    }
-
-    function gameLoop() {
-      update();
-      draw();
-    }
-
-    function update() {
-      const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
-
-      if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount ||
-          snake.some(part => part.x === head.x && part.y === head.y)) {
-        resetToMenu();
-        return;
-      }
-
-      snake.unshift(head);
-
-      if (head.x === apple.x && head.y === apple.y) {
-        score++;
-        document.getElementById("score").textContent = "Puntuació: " + score;
-        placeApple();
-      } else {
-        snake.pop();
-      }
-    }
-
-    function draw() {
-      ctx.fillStyle = "#222";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      for (let i = 0; i < snake.length; i++) {
-        const part = snake[i];
-        ctx.fillStyle = "#0f0";
-        ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
-
-        if (i === 0) {
-          ctx.fillStyle = "#00f";
-          const eyeSize = 4;
-          let eye1 = {}, eye2 = {};
-
-          if (direction.x === 1) {
-            eye1 = { x: part.x * gridSize + 14, y: part.y * gridSize + 4 };
-            eye2 = { x: part.x * gridSize + 14, y: part.y * gridSize + 12 };
-          } else if (direction.x === -1) {
-            eye1 = { x: part.x * gridSize + 2, y: part.y * gridSize + 4 };
-            eye2 = { x: part.x * gridSize + 2, y: part.y * gridSize + 12 };
-          } else if (direction.y === -1) {
-            eye1 = { x: part.x * gridSize + 4, y: part.y * gridSize + 2 };
-            eye2 = { x: part.x * gridSize + 12, y: part.y * gridSize + 2 };
-          } else if (direction.y === 1) {
-            eye1 = { x: part.x * gridSize + 4, y: part.y * gridSize + 14 };
-            eye2 = { x: part.x * gridSize + 12, y: part.y * gridSize + 14 };
-          } else {
-            eye1 = { x: part.x * gridSize + 2, y: part.y * gridSize + 4 };
-            eye2 = { x: part.x * gridSize + 2, y: part.y * gridSize + 12 };
-          }
-
-          ctx.fillRect(eye1.x, eye1.y, eyeSize, eyeSize);
-          ctx.fillRect(eye2.x, eye2.y, eyeSize, eyeSize);
+      for(const b of boxes){
+        if(pointInside(x,y, {x:b.x,y:b.y,w:b.w,h:b.h})){
+          selectedSpeedKey = b.key;
+          snakeSpeed = SPEEDS[selectedSpeedKey];
+          draw(); // actualitza marques
+          return;
         }
       }
-
-      ctx.fillStyle = "#f00";
-      ctx.fillRect(apple.x * gridSize, apple.y * gridSize, gridSize - 2, gridSize - 2);
-
-      if (!gameStarted) drawStartMenu();
-      if (paused) drawPauseMenu();
     }
+    // si s'ha clicat al canvas però fora del menú, no fem res
+    return;
+  }
 
-    function drawStartMenu() {
-      ctx.fillStyle = "rgba(0,0,0,0.7)";
-      ctx.fillRect(50, 80, 300, 240);
-      ctx.fillStyle = "#fff";
-      ctx.font = "20px sans-serif";
-      ctx.fillText("Benvingut al joc de la serp!", 80, 120);
-      ctx.fillText("Selecciona la velocitat:", 100, 160);
-      ctx.fillText("🐢", 100, 200);
-      ctx.fillText("⚖️", 180, 200);
-      ctx.fillText("🚀", 260, 200);
-
-      startButton.style.left = canvas.offsetLeft + 150 + "px";
-      startButton.style.top = canvas.offsetTop + 240 + "px";
-      startButton.style.display = "block";
+  // si està en pausa i click dins pauseMenu -> no fem res perquè hi ha botons reals
+  if(paused){
+    if(pointInside(x,y, pauseMenuRect)){
+      // botons reals: continu i reiniciar estan visibles i posicionats
+      return;
     }
+  }
+});
 
-    function drawPauseMenu() {
-      ctx.fillStyle = "rgba(0,0,0,0.7)";
-      ctx.fillRect(50, 100, 300, 200);
-      ctx.fillStyle = "#fff";
-      ctx.font = "20px sans-serif";
-      ctx.fillText("⏸ Joc en pausa", 130, 140);
-      ctx.fillText("Puntuació: " + score, 140, 180);
+// Helper punt dins rectangle
+function pointInside(px,py, rect){
+  return px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h;
+}
 
-      pauseContinue.style.left = canvas.offsetLeft + 80 + "px";
-      pauseContinue.style.top = canvas.offsetTop + 220 + "px";
-      pauseContinue.style.display = "block";
+// Posicionar botons quan la finestra canvassi canvia mida/posició
+function updateButtonPositions(){
+  if(!gameStarted) positionStartButton();
+  if(paused) positionPauseButtons();
+}
 
-      pauseReset.style.left = canvas.offsetLeft + 220 + "px";
-      pauseReset.style.top = canvas.offsetTop + 220 + "px";
-      pauseReset.style.display = "block";
+// Gestionar clics dels botons reals
+startButton.addEventListener('click', ()=>{
+  // aplicar la velocitat seleccionada abans d'arrencar
+  snakeSpeed = SPEEDS[selectedSpeedKey];
+  startGame();
+});
+
+pauseContinue.addEventListener('click', ()=> resumeGame());
+pauseReset.addEventListener('click', ()=> {
+  // Reiniciar porta al menu d'inici
+  resetToMenu();
+});
+
+// Teclat: moure, pausa (Esc), des del menu de pausa C i R també
+document.addEventListener('keydown', (e)=>{
+  if(!gameStarted){
+    // si estem al menú d'inici, premer Enter per començar (opcional)
+    if(e.key === 'Enter'){
+      snakeSpeed = SPEEDS[selectedSpeedKey];
+      startGame();
     }
+    return;
+  }
 
-    function hideButtons() {
-      startButton.style.display = "none";
-      pauseContinue.style.display = "none";
-      pauseReset.style.display = "none";
-    }
+  if(e.key === 'Escape'){
+    pauseGame();
+    return;
+  }
 
-    function place
+  if(paused){
+    if(e.key === 'c' || e.key === 'C') { resumeGame(); return; }
+    if(e.key === 'r' || e.key === 'R') { resetToMenu(); return; }
+    return;
+  }
+
+  // Controls de direcció: evitar gir 180
+  if(e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W'){
+    if(direction.y !== 1) nextDirection = {x:0,y:-1};
+  } else if(e.key === 'ArrowDown' || e.key === 's' || e.key === 'S'){
+    if(direction.y !== -1) nextDirection = {x:0,y:1};
+  } else if(e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A'){
+    if(direction.x !== 1) nextDirection = {x:-1,y:0};
+  } else if(e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D'){
+    if(direction.x !== -1) nextDirection = {x:1,y:0};
+  }
+});
+
+// Assegurar posicionament botons en resize/scroll
+window.addEventListener('resize', updateButtonPositions);
+window.addEventListener('scroll', updateButtonPositions);
+
+// inici
+initSnake();
+placeApple();
+draw(); // dibuixar el canvas inicial amb menú
+drawStartMenu();
+positionStartButton();
+showStartButton();
+
+// Petita millora: quan el botó Jugar es mostri, actualitzar posició cada 100ms per canvis de layout
+let posInterval = setInterval(()=> {
+  if(!gameStarted || paused) positionStartButton();
+  if(paused) positionPauseButtons();
+}, 120);
+
+// netejar interval si no cal
+window.addEventListener('beforeunload', ()=> {
+  if(posInterval) clearInterval(posInterval);
+  if(gameInterval) clearInterval(gameInterval);
+});
+  </script>
+</body>
+</html>
