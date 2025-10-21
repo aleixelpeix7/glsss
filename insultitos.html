@@ -1,1 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Insultos con cariño</title>
+  <style>
+    body {
+      background-color:#21BCFF;
+      font-family: 'Comic Sans MS', cursive;
+      text-align: center;
+      padding-top: 100px;
+    }
+    h1 {
+      color: #FFDF20;
+    }
+    #insulto {
+      font-size: 24px;
+      margin-top: 30px;
+      color: #FB2C36;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      background-color: #9AE630;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: white;
+    }
+    button:hover {
+      background-color: #BBF451;
+    }
+  </style>
+</head>
+<body>
+  <h1>¡Insultitos para tii!</h1>
+  <button onclick="lanzarInsulto()">Dame un insulto</button>
+  <div id="insulto"></div>
+
+  <script>
+    const insultos = [
+      "Estas como un quesito",
+      "¡Mepecapagopo epen tupus mupuepertopos!",
+      "Tapundimok",
+      "GILIPOLLAS",
+      "admira el árbol en finés",
+      "Te gusta el pito ehhhh",
+      "O te callas o te callo con un beso",
+      "Falta de sexo urgente",
+      "Comprate una vida social",
+      "¿Te doy leche natural?",
+      "Se te ha caído el papel que te envuelve bombón",
+      "Merengue merengue",
+      "Espartaco",
+      "¡Traedle una gorda a este pa que se calle!",
+      "GO GO GO",
+      "Ohhh sí, no paresss",
+      "GLS",
+      "Pa amb tomata collons",
+      "Lihuek",
+      "Tabon di mok",
+      "Kahba",
+      "Zemen",
+      "Sub-nor-mal",
+      "I'm gay or lesbian"
+    ];
+
+    function lanzarInsulto() {
+      const aleatorio = Math.floor(Math.random() * insultos.length);
+      document.getElementById("insulto").innerText = insultos[aleatorio];
+    }
+  </script>
+</body>
+</html>
 
