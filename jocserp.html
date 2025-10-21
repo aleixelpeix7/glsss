@@ -53,7 +53,8 @@
   <p id="score">Puntuació: 0</p>
 
   <script>
-/* Joc de la serp - fitxer complet corregit */
+/* Fitxer complet corregit: botons alineats i la serp no es mostra fins prémer Jugar */
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const wrap = document.getElementById('gameWrap');
@@ -64,10 +65,12 @@ const pauseContinue = document.getElementById('pauseContinue');
 const pauseReset = document.getElementById('pauseReset');
 
 const gridSize = 20;
-const tileCountX = canvas.width / gridSize;
-const tileCountY = canvas.height / gridSize;
+const INTERNAL_W = canvas.width; // 400
+const INTERNAL_H = canvas.height; // 400
+const tileCountX = INTERNAL_W / gridSize;
+const tileCountY = INTERNAL_H / gridSize;
 
-let snake = [];
+let snake = null; // sera array només quan el joc comenci
 let direction = {x:0,y:0};
 let nextDirection = {x:0,y:0};
 let apple = {x:5,y:5};
@@ -83,6 +86,7 @@ let snakeSpeed = SPEEDS[selectedSpeedKey];
 const startMenuRect = { x:50, y:80, w:300, h:240 };
 const pauseMenuRect = { x:50, y:100, w:300, h:200 };
 
+/* ---- inicialitzacions que no mostren la serp ---- */
 function initSnake(){
   snake = [ {x:10,y:10}, {x:9,y:10} ];
   direction = {x:0,y:0};
@@ -91,6 +95,7 @@ function initSnake(){
   scoreEl.textContent = 'Puntuació: 0';
 }
 
+/* Col·loca poma evitant la serp (si existeix) */
 function placeApple(){
   let tries = 0;
   do {
@@ -98,9 +103,10 @@ function placeApple(){
     apple.y = Math.floor(Math.random() * tileCountY);
     tries++;
     if(tries>200) break;
-  } while (snake.some(s=>s.x===apple.x && s.y===apple.y));
+  } while (snake && snake.some(s=>s.x===apple.x && s.y===apple.y));
 }
 
+/* ---- controls de joc ---- */
 function startGame(){
   gameStarted = true;
   paused = false;
@@ -137,7 +143,11 @@ function resetToMenu(){
   gameStarted = false;
   paused = false;
   hideButtons();
-  initSnake();
+  snake = null; // eliminar la serp visible
+  direction = {x:0,y:0};
+  nextDirection = {x:0,y:0};
+  score = 0;
+  scoreEl.textContent = 'Puntuació: 0';
   placeApple();
   draw();
   drawStartMenu();
@@ -145,7 +155,9 @@ function resetToMenu(){
   showStartButton();
 }
 
+/* ---- bucle ---- */
 function gameLoop(){
+  // aplicar nextDirection evitant 180
   if(nextDirection.x !== direction.x || nextDirection.y !== direction.y){
     if(!(nextDirection.x === -direction.x && nextDirection.y === -direction.y)){
       direction = {...nextDirection};
@@ -154,6 +166,7 @@ function gameLoop(){
   if(direction.x === 0 && direction.y === 0) return;
 
   const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
   if(head.x < 0 || head.x >= tileCountX || head.y < 0 || head.y >= tileCountY ||
      snake.some(p => p.x === head.x && p.y === head.y)){
     resetToMenu();
@@ -171,45 +184,49 @@ function gameLoop(){
   draw();
 }
 
+/* ---- dibuix ---- */
 function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // fons
+  ctx.clearRect(0,0,INTERNAL_W,INTERNAL_H);
   ctx.fillStyle = '#222';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillRect(0,0,INTERNAL_W,INTERNAL_H);
 
-  // dibuixar serp
-  for(let i=0;i<snake.length;i++){
-    const p = snake[i];
-    ctx.fillStyle = '#0f0';
-    ctx.fillRect(p.x * gridSize, p.y * gridSize, gridSize-2, gridSize-2);
-  }
-
-  // ulls orientats segons direction
-  if(snake.length>0){
-    const head = snake[0];
-    const cellX = head.x * gridSize;
-    const cellY = head.y * gridSize;
-    const eyeSize = 4;
-    let e1 = {x: cellX + 2, y: cellY + 4};
-    let e2 = {x: cellX + 2, y: cellY + 12};
-    if(direction.x === 1){ // dreta
-      e1 = {x: cellX + (gridSize - 6), y: cellY + 4};
-      e2 = {x: cellX + (gridSize - 6), y: cellY + 12};
-    } else if(direction.x === -1){ // esquerra
-      e1 = {x: cellX + 2, y: cellY + 4};
-      e2 = {x: cellX + 2, y: cellY + 12};
-    } else if(direction.y === -1){ // amunt
-      e1 = {x: cellX + 6, y: cellY + 2};
-      e2 = {x: cellX + 14, y: cellY + 2};
-    } else if(direction.y === 1){ // avall
-      e1 = {x: cellX + 6, y: cellY + (gridSize - 6)};
-      e2 = {x: cellX + 14, y: cellY + (gridSize - 6)};
-    } else {
-      e1 = {x: cellX + 2, y: cellY + 4};
-      e2 = {x: cellX + 2, y: cellY + 12};
+  // dibuixar serp només si existeix (no abans de prémer Jugar)
+  if(snake){
+    for(let i=0;i<snake.length;i++){
+      const p = snake[i];
+      ctx.fillStyle = '#0f0';
+      ctx.fillRect(p.x * gridSize, p.y * gridSize, gridSize-2, gridSize-2);
     }
-    ctx.fillStyle = '#00f';
-    ctx.fillRect(e1.x, e1.y, eyeSize, eyeSize);
-    ctx.fillRect(e2.x, e2.y, eyeSize, eyeSize);
+
+    // ulls orientats segons direction (cap)
+    if(snake.length>0){
+      const head = snake[0];
+      const cellX = head.x * gridSize;
+      const cellY = head.y * gridSize;
+      const eyeSize = 4;
+      let e1 = {x: cellX + 2, y: cellY + 4};
+      let e2 = {x: cellX + 2, y: cellY + 12};
+      if(direction.x === 1){
+        e1 = {x: cellX + (gridSize - 6), y: cellY + 4};
+        e2 = {x: cellX + (gridSize - 6), y: cellY + 12};
+      } else if(direction.x === -1){
+        e1 = {x: cellX + 2, y: cellY + 4};
+        e2 = {x: cellX + 2, y: cellY + 12};
+      } else if(direction.y === -1){
+        e1 = {x: cellX + 6, y: cellY + 2};
+        e2 = {x: cellX + 14, y: cellY + 2};
+      } else if(direction.y === 1){
+        e1 = {x: cellX + 6, y: cellY + (gridSize - 6)};
+        e2 = {x: cellX + 14, y: cellY + (gridSize - 6)};
+      } else {
+        e1 = {x: cellX + 2, y: cellY + 4};
+        e2 = {x: cellX + 2, y: cellY + 12};
+      }
+      ctx.fillStyle = '#00f';
+      ctx.fillRect(e1.x, e1.y, eyeSize, eyeSize);
+      ctx.fillRect(e2.x, e2.y, eyeSize, eyeSize);
+    }
   }
 
   // poma
@@ -220,6 +237,7 @@ function draw(){
   if(paused) drawPauseMenu();
 }
 
+/* ---- menus dins canvas ---- */
 function drawStartMenu(){
   ctx.fillStyle = 'rgba(0,0,0,0.75)';
   ctx.fillRect(startMenuRect.x, startMenuRect.y, startMenuRect.w, startMenuRect.h);
@@ -286,23 +304,34 @@ function drawPauseMenu(){
   showPauseButtons();
 }
 
-function positionStartButton(){
+/* ---- botons HTML sobre el canvas (posició amb escala) ---- */
+function getCanvasRectScaled(){
   const rect = canvas.getBoundingClientRect();
-  const left = rect.left + (startMenuRect.x + startMenuRect.w/2) - 40;
-  const top = rect.top + startMenuRect.y + startMenuRect.h - 48;
+  const scaleX = rect.width / INTERNAL_W;
+  const scaleY = rect.height / INTERNAL_H;
+  return { rect, scaleX, scaleY };
+}
+
+function positionStartButton(){
+  const { rect, scaleX } = getCanvasRectScaled();
+  // calcular posició CSS a partir de coordenades internes del menú
+  const internalX = startMenuRect.x + startMenuRect.w/2 - 40; // -40 per centrar botó (amplada aprox)
+  const internalY = startMenuRect.y + startMenuRect.h - 48;
+  const left = rect.left + internalX * scaleX;
+  const top = rect.top + internalY * (rect.height / INTERNAL_H);
   startButton.style.left = Math.round(left) + 'px';
   startButton.style.top  = Math.round(top)  + 'px';
 }
 
 function positionPauseButtons(){
-  const rect = canvas.getBoundingClientRect();
-  const leftC = rect.left + pauseMenuRect.x + 40;
-  const leftR = rect.left + pauseMenuRect.x + pauseMenuRect.w - 120;
-  const top = rect.top + pauseMenuRect.y + pauseMenuRect.h - 56;
-  pauseContinue.style.left = Math.round(leftC) + 'px';
-  pauseContinue.style.top  = Math.round(top) + 'px';
-  pauseReset.style.left    = Math.round(leftR) + 'px';
-  pauseReset.style.top     = Math.round(top) + 'px';
+  const { rect, scaleX } = getCanvasRectScaled();
+  const internalLeftC = pauseMenuRect.x + 40;
+  const internalLeftR = pauseMenuRect.x + pauseMenuRect.w - 120;
+  const internalTop = pauseMenuRect.y + pauseMenuRect.h - 56;
+  pauseContinue.style.left = Math.round(rect.left + internalLeftC * scaleX) + 'px';
+  pauseContinue.style.top  = Math.round(rect.top + internalTop * (rect.height / INTERNAL_H)) + 'px';
+  pauseReset.style.left    = Math.round(rect.left + internalLeftR * scaleX) + 'px';
+  pauseReset.style.top     = Math.round(rect.top + internalTop * (rect.height / INTERNAL_H)) + 'px';
 }
 
 function showStartButton(){ startButton.classList.remove('hidden'); }
@@ -312,10 +341,14 @@ function hidePauseButtons(){ pauseContinue.classList.add('hidden'); pauseReset.c
 function showPauseMenu(){ draw(); drawPauseMenu(); }
 function hideButtons(){ startButton.classList.add('hidden'); pauseContinue.classList.add('hidden'); pauseReset.classList.add('hidden'); }
 
+/* ---- interacció amb el canvas ---- */
 canvas.addEventListener('click', (ev)=>{
   const rect = canvas.getBoundingClientRect();
-  const x = Math.floor(ev.clientX - rect.left);
-  const y = Math.floor(ev.clientY - rect.top);
+  // convertir a coordenades internes (tenint en compte escala)
+  const scaleX = rect.width / INTERNAL_W;
+  const scaleY = rect.height / INTERNAL_H;
+  const x = Math.floor((ev.clientX - rect.left) / scaleX);
+  const y = Math.floor((ev.clientY - rect.top) / scaleY);
 
   if(!gameStarted){
     if(pointInside(x,y, startMenuRect)){
@@ -341,6 +374,7 @@ canvas.addEventListener('click', (ev)=>{
 
   if(paused){
     if(pointInside(x,y, pauseMenuRect)){
+      // botons reals estan disponibles; no fem res amb el clic dins canvas
       return;
     }
   }
@@ -350,11 +384,7 @@ function pointInside(px,py, rect){
   return px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h;
 }
 
-function updateButtonPositions(){
-  if(!gameStarted) positionStartButton();
-  if(paused) positionPauseButtons();
-}
-
+/* ---- botons HTML ---- */
 startButton.addEventListener('click', ()=>{
   snakeSpeed = SPEEDS[selectedSpeedKey];
   startGame();
@@ -363,6 +393,7 @@ startButton.addEventListener('click', ()=>{
 pauseContinue.addEventListener('click', ()=> resumeGame());
 pauseReset.addEventListener('click', ()=> { resetToMenu(); });
 
+/* ---- teclat ---- */
 document.addEventListener('keydown', (e)=>{
   if(!gameStarted){
     if(e.key === 'Enter'){
@@ -394,21 +425,31 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 
+/* ---- utilitats i arrencada ---- */
 window.addEventListener('resize', updateButtonPositions);
 window.addEventListener('scroll', updateButtonPositions);
 
-initSnake();
-placeApple();
-draw();
-drawStartMenu();
-positionStartButton();
-showStartButton();
+function updateButtonPositions(){
+  if(!gameStarted) positionStartButton();
+  if(paused) positionPauseButtons();
+}
 
+initDisplay();
 let posInterval = setInterval(()=> {
-  if(!gameStarted || paused) positionStartButton();
+  if(!gameStarted) positionStartButton();
   if(paused) positionPauseButtons();
 }, 120);
 
+function initDisplay(){
+  snake = null; // no mostrar la serp fins prémer Jugar
+  placeApple();
+  draw();
+  drawStartMenu();
+  positionStartButton();
+  showStartButton();
+}
+
+/* neteja */
 window.addEventListener('beforeunload', ()=> {
   if(posInterval) clearInterval(posInterval);
   if(gameInterval) clearInterval(gameInterval);
@@ -416,3 +457,4 @@ window.addEventListener('beforeunload', ()=> {
   </script>
 </body>
 </html>
+
