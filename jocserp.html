@@ -21,7 +21,6 @@
     #gameWrap {
       position:relative;
       width:var(--wrap-w);
-      /* mantenim el context de posicionament per als botons */
     }
     canvas {
       width:100%;
@@ -32,9 +31,8 @@
     }
     #score { color:#444; font-size:14px; margin:6px 0 0 0; }
 
-    /* Botons HTML posats dins el parent #gameWrap per evitar dependències del viewport */
     .canvas-button {
-      position:absolute; /* respecte a #gameWrap */
+      position:absolute;
       background:#fff;
       color:#111;
       border:1px solid #888;
@@ -45,22 +43,17 @@
       box-shadow:0 2px 6px rgba(0,0,0,0.25);
       user-select:none;
       z-index:20;
-      transform:translate(-50%, -50%); /* centrar a la posició que indiquem amb left/top */
+      transform:translate(-50%,-50%);
       white-space:nowrap;
     }
     .hidden{ display:none; }
-
-    /* petites millores visuals per la selecció de velocitat (dins canvas) */
   </style>
 </head>
 <body>
   <h1>🐍 Joc de la Serp</h1>
 
   <div id="gameWrap">
-    <!-- canvas intern 400x400 (resolució de dibuix) -->
     <canvas id="gameCanvas" width="400" height="400"></canvas>
-
-    <!-- Botons HTML posicionats dins #gameWrap amb left/top com a coordenades internes transformades -->
     <button id="startButton" class="canvas-button hidden" aria-label="Jugar">▶️ Jugar</button>
     <button id="pauseContinue" class="canvas-button hidden" aria-label="Continuar">🔄 Continuar</button>
     <button id="pauseReset" class="canvas-button hidden" aria-label="Reiniciar">🔁 Reiniciar</button>
@@ -69,7 +62,6 @@
   <p id="score">Puntuació: 0</p>
 
   <script>
-    // ---------- DOM ----------
     const wrap = document.getElementById('gameWrap');
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -78,17 +70,13 @@
     const pauseReset = document.getElementById('pauseReset');
     const scoreEl = document.getElementById('score');
 
-    // ---------- internal size (drawing coords) ----------
-    const INTERNAL_W = canvas.width;   // 400
-    const INTERNAL_H = canvas.height;  // 400
-
-    // grid
+    const INTERNAL_W = canvas.width;
+    const INTERNAL_H = canvas.height;
     const gridSize = 20;
     const tileCountX = INTERNAL_W / gridSize;
     const tileCountY = INTERNAL_H / gridSize;
 
-    // state
-    let snake = null;               // null fins que s'inicia
+    let snake = null;
     let direction = {x:0,y:0};
     let nextDirection = {x:0,y:0};
     let apple = {x:5,y:5};
@@ -104,7 +92,6 @@
     const startMenuRect = { x:50, y:80, w:300, h:240 };
     const pauseMenuRect = { x:50, y:100, w:300, h:200 };
 
-    // ---------- helpers ----------
     function updateScore(){ scoreEl.textContent = 'Puntuació: ' + score; }
     function clearIntervalSafe(){ if(gameInterval){ clearInterval(gameInterval); gameInterval = null; } }
 
@@ -126,24 +113,21 @@
       updateScore();
     }
 
-    // ---------- positioning helpers (relative to #gameWrap coordinates) ----------
-    // convert internal game coordinates (0..INTERNAL_W) -> percent left/top in #gameWrap
     function internalToWrapLeft(internalX){
-      const wrapW = wrap.clientWidth; // CSS width of wrap
-      // scale factor from internal pixel to wrap css pixel
+      const wrapW = wrap.clientWidth;
       const scale = wrapW / INTERNAL_W;
       return internalX * scale;
     }
     function internalToWrapTop(internalY){
-      const wrapH = wrap.clientHeight; // equals scaled canvas height
+      const wrapH = wrap.clientHeight;
       const scale = wrapH / INTERNAL_H;
       return internalY * scale;
     }
 
     function positionStartButton(){
-      // center under start menu: use internal coords
+      // posició més avall per evitar solapament amb el text
       const internalX = startMenuRect.x + startMenuRect.w/2;
-      const internalY = startMenuRect.y + startMenuRect.h - 32;
+      const internalY = startMenuRect.y + startMenuRect.h - 12; // moved down (closer to bottom)
       startButton.style.left = (internalToWrapLeft(internalX)) + 'px';
       startButton.style.top  = (internalToWrapTop(internalY))  + 'px';
       startButton.style.transform = 'translate(-50%,-50%)';
@@ -167,21 +151,17 @@
     function hidePauseButtons(){ pauseContinue.classList.add('hidden'); pauseReset.classList.add('hidden'); }
     function hideAllButtons(){ hideStartButton(); hidePauseButtons(); }
 
-    // ---------- drawing ----------
     function draw(){
-      // draw to internal canvas pixels
       ctx.clearRect(0,0,INTERNAL_W,INTERNAL_H);
       ctx.fillStyle = '#222';
       ctx.fillRect(0,0,INTERNAL_W,INTERNAL_H);
 
-      // snake
       if(snake){
         for(let i=0;i<snake.length;i++){
           const p = snake[i];
           ctx.fillStyle = '#0f0';
           ctx.fillRect(p.x * gridSize, p.y * gridSize, gridSize-2, gridSize-2);
         }
-        // eyes
         if(snake.length>0){
           const head = snake[0];
           const cellX = head.x * gridSize;
@@ -208,11 +188,12 @@
         }
       }
 
-      // apple
-      ctx.fillStyle = '#f00';
-      ctx.fillRect(apple.x * gridSize, apple.y * gridSize, gridSize-2, gridSize-2);
+      // draw apple only when gameStarted (so it doesn't show on menu)
+      if(gameStarted){
+        ctx.fillStyle = '#f00';
+        ctx.fillRect(apple.x * gridSize, apple.y * gridSize, gridSize-2, gridSize-2);
+      }
 
-      // menus
       if(!gameStarted) drawStartMenu();
       if(paused) drawPauseMenu();
     }
@@ -279,18 +260,15 @@
       showPauseButtons();
     }
 
-    // ---------- input: clicks inside scaled canvas ----------
     function getWrapScale(){
-      // wrap.clientWidth is the CSS width of the parent; canvas internal width is INTERNAL_W
       const wrapW = wrap.clientWidth;
-      const wrapH = wrap.clientHeight; // should be scaled canvas height
+      const wrapH = wrap.clientHeight;
       return { wrapW, wrapH, scaleX: wrapW / INTERNAL_W, scaleY: wrapH / INTERNAL_H };
     }
 
     canvas.addEventListener('click', (ev)=>{
       const { wrapW, wrapH, scaleX, scaleY } = getWrapScale();
       const rect = canvas.getBoundingClientRect();
-      // compute coordinates relative to internal drawing space
       const internalX = Math.floor((ev.clientX - rect.left) / scaleX);
       const internalY = Math.floor((ev.clientY - rect.top) / scaleY);
 
@@ -308,7 +286,7 @@
             if(pointInside(internalX, internalY, {x:b.x,y:b.y,w:b.w,h:b.h})){
               selectedSpeedKey = b.key;
               snakeSpeed = SPEEDS[selectedSpeedKey];
-              draw(); // update visual selection
+              draw();
               return;
             }
           }
@@ -318,7 +296,6 @@
 
       if(paused){
         if(pointInside(internalX, internalY, pauseMenuRect)){
-          // interactions handled by HTML buttons
           return;
         }
       }
@@ -328,7 +305,6 @@
       return px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h;
     }
 
-    // ---------- HTML buttons handlers ----------
     startButton.addEventListener('click', ()=>{
       snakeSpeed = SPEEDS[selectedSpeedKey];
       startGame();
@@ -336,7 +312,6 @@
     pauseContinue.addEventListener('click', ()=> resumeGame());
     pauseReset.addEventListener('click', ()=> { resetToMenu(); });
 
-    // ---------- keyboard ----------
     document.addEventListener('keydown', (e)=>{
       if(!gameStarted){
         if(e.key === 'Enter'){
@@ -368,7 +343,6 @@
       }
     });
 
-    // ---------- game control ----------
     function startGame(){
       gameStarted = true;
       paused = false;
@@ -444,7 +418,6 @@
       draw();
     }
 
-    // ---------- resize/position updates ----------
     function updateButtonPositions(){
       if(!gameStarted) positionStartButton();
       if(paused) positionPauseButtons();
@@ -452,7 +425,6 @@
     window.addEventListener('resize', updateButtonPositions);
     window.addEventListener('orientationchange', updateButtonPositions);
 
-    // initial display: no snake yet
     function initDisplay(){
       snake = null;
       direction = {x:0,y:0};
@@ -467,15 +439,8 @@
     }
     initDisplay();
 
-    // small recurring updater in case layout changes (keeps buttons aligned)
-    const posInterval = setInterval(()=> {
-      updateButtonPositions();
-    }, 120);
-
-    window.addEventListener('beforeunload', ()=>{
-      clearInterval(posInterval);
-      clearIntervalSafe();
-    });
+    const posInterval = setInterval(()=> { updateButtonPositions(); }, 120);
+    window.addEventListener('beforeunload', ()=>{ clearInterval(posInterval); clearIntervalSafe(); });
   </script>
 </body>
 </html>
