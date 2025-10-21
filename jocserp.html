@@ -28,60 +28,12 @@
       font-size: 1.2em;
       color: #444;
     }
-
-    .overlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      z-index: 10;
-    }
-
-    .overlay.hidden {
-      display: none;
-    }
-
-    .overlay h2 {
-      font-size: 2em;
-      margin-bottom: 20px;
-    }
-
-    .overlay button {
-      font-size: 1.2em;
-      padding: 10px 20px;
-      margin: 10px;
-      cursor: pointer;
-    }
-
-    #pauseScore {
-      font-size: 2em;
-      margin-top: 20px;
-    }
   </style>
 </head>
 <body>
   <h1>🐍 Joc de la Serp</h1>
   <canvas id="gameCanvas" width="400" height="400"></canvas>
   <p id="score">Puntuació: 0</p>
-
-  <!-- Menú d'inici -->
-  <div id="startMenu" class="overlay">
-    <h2>Benvingut al joc de la serp!</h2>
-    <button onclick="startGame()">▶️ Jugar</button>
-  </div>
-
-  <!-- Menú de pausa -->
-  <div id="pauseMenu" class="overlay hidden">
-    <h2>⏸ Joc en pausa</h2>
-    <button onclick="resumeGame()">🔄 Continuar</button>
-    <button onclick="resetGame()">🔁 Reiniciar</button>
-    <div id="pauseScore">Puntuació: 0</div>
-  </div>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
@@ -96,6 +48,7 @@
     let score = 0;
     let gameInterval = null;
     let paused = false;
+    let gameStarted = false;
 
     function initSnake() {
       snake = [
@@ -108,10 +61,10 @@
     }
 
     function startGame() {
-      document.getElementById("startMenu").classList.add("hidden");
+      gameStarted = true;
       initSnake();
       placeApple();
-      direction = { x: 1, y: 0 };
+      drawStartMenu(false);
       gameInterval = setInterval(gameLoop, 200);
     }
 
@@ -119,25 +72,23 @@
       if (!paused) {
         paused = true;
         clearInterval(gameInterval);
-        document.getElementById("pauseScore").textContent = "Puntuació: " + score;
-        document.getElementById("pauseMenu").classList.remove("hidden");
+        drawPauseMenu();
       }
     }
 
     function resumeGame() {
       if (paused) {
         paused = false;
-        document.getElementById("pauseMenu").classList.add("hidden");
         gameInterval = setInterval(gameLoop, 200);
       }
     }
 
     function resetGame() {
       clearInterval(gameInterval);
-      document.getElementById("pauseMenu").classList.add("hidden");
       initSnake();
       placeApple();
       direction = { x: 1, y: 0 };
+      paused = false;
       gameInterval = setInterval(gameLoop, 200);
     }
 
@@ -173,25 +124,66 @@
 
       // Dibuixar serp
       for (let i = 0; i < snake.length; i++) {
+        const part = snake[i];
+        ctx.fillStyle = "#0f0";
+        ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
+
+        // Ulls al cap
         if (i === 0) {
-          // Cap amb ulls
-          ctx.fillStyle = "#0f0";
-          ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize - 2, gridSize - 2);
           ctx.fillStyle = "#00f";
           const eyeSize = 4;
-          const offsetX = direction.x === 1 ? 10 : direction.x === -1 ? 2 : 6;
-          const offsetY = direction.y === 1 ? 10 : direction.y === -1 ? 2 : 6;
-          ctx.fillRect(snake[i].x * gridSize + offsetX, snake[i].y * gridSize + 4, eyeSize, eyeSize);
-          ctx.fillRect(snake[i].x * gridSize + offsetX, snake[i].y * gridSize + 12, eyeSize, eyeSize);
-        } else {
-          ctx.fillStyle = "#0f0";
-          ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize - 2, gridSize - 2);
+          let eye1 = { x: 0, y: 0 };
+          let eye2 = { x: 0, y: 0 };
+
+          if (direction.x === 1) { // dreta
+            eye1 = { x: part.x * gridSize + 14, y: part.y * gridSize + 4 };
+            eye2 = { x: part.x * gridSize + 14, y: part.y * gridSize + 12 };
+          } else if (direction.x === -1) { // esquerra
+            eye1 = { x: part.x * gridSize + 2, y: part.y * gridSize + 4 };
+            eye2 = { x: part.x * gridSize + 2, y: part.y * gridSize + 12 };
+          } else if (direction.y === -1) { // amunt
+            eye1 = { x: part.x * gridSize + 4, y: part.y * gridSize + 2 };
+            eye2 = { x: part.x * gridSize + 12, y: part.y * gridSize + 2 };
+          } else if (direction.y === 1) { // avall
+            eye1 = { x: part.x * gridSize + 4, y: part.y * gridSize + 14 };
+            eye2 = { x: part.x * gridSize + 12, y: part.y * gridSize + 14 };
+          } else {
+            // direcció inicial (quiet): ulls a l'esquerra
+            eye1 = { x: part.x * gridSize + 2, y: part.y * gridSize + 4 };
+            eye2 = { x: part.x * gridSize + 2, y: part.y * gridSize + 12 };
+          }
+
+          ctx.fillRect(eye1.x, eye1.y, eyeSize, eyeSize);
+          ctx.fillRect(eye2.x, eye2.y, eyeSize, eyeSize);
         }
       }
 
       // Dibuixar poma
       ctx.fillStyle = "#f00";
       ctx.fillRect(apple.x * gridSize, apple.y * gridSize, gridSize - 2, gridSize - 2);
+
+      if (!gameStarted) drawStartMenu(true);
+      if (paused) drawPauseMenu();
+    }
+
+    function drawStartMenu(show) {
+      if (!show) return;
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.fillRect(50, 100, 300, 200);
+      ctx.fillStyle = "#fff";
+      ctx.font = "20px sans-serif";
+      ctx.fillText("Benvingut al joc de la serp!", 80, 150);
+      ctx.fillText("Fes clic per començar", 110, 200);
+    }
+
+    function drawPauseMenu() {
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.fillRect(50, 100, 300, 200);
+      ctx.fillStyle = "#fff";
+      ctx.font = "20px sans-serif";
+      ctx.fillText("⏸ Joc en pausa", 130, 140);
+      ctx.fillText("Puntuació: " + score, 140, 180);
+      ctx.fillText("C - Continuar | R - Reiniciar", 80, 220);
     }
 
     function placeApple() {
@@ -199,9 +191,21 @@
       apple.y = Math.floor(Math.random() * tileCount);
     }
 
+    canvas.addEventListener("click", () => {
+      if (!gameStarted) startGame();
+    });
+
     document.addEventListener("keydown", (e) => {
+      if (!gameStarted) return;
+
       if (e.key === "Escape") {
         pauseGame();
+        return;
+      }
+
+      if (paused) {
+        if (e.key === "c" || e.key === "C") resumeGame();
+        if (e.key === "r" || e.key === "R") resetGame();
         return;
       }
 
@@ -223,5 +227,4 @@
 
     draw(); // Dibuix inicial
   </script>
-</body>
-</html>
+</body
