@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Juego de la serpiente</title>
+  <title>Juego de la serpiente|GLS</title>
   <style>
     .enllac-inici {
   position: absolute;
@@ -77,7 +77,7 @@
     <button id="pauseReset" class="canvas-button hidden" aria-label="Reiniciar">🔁 Reiniciar</button>
   </div>
 
-  <p id="score">Puntuació: 0</p>
+  <p id="score">Puntuacion: 0</p>
 
   <script>
     const wrap = document.getElementById('gameWrap');
@@ -222,9 +222,9 @@
       ctx.fillRect(startMenuRect.x, startMenuRect.y, startMenuRect.w, startMenuRect.h);
       ctx.fillStyle = '#fff';
       ctx.font = '18px system-ui, sans-serif';
-      ctx.fillText('Benvingut al joc de la serp!', startMenuRect.x + 20, startMenuRect.y + 38);
+      ctx.fillText('Bienvenido al juego de la serpiente!', startMenuRect.x + 20, startMenuRect.y + 38);
       ctx.font = '14px system-ui, sans-serif';
-      ctx.fillText('Selecciona la velocitat:', startMenuRect.x + 20, startMenuRect.y + 72);
+      ctx.fillText('Selecciona la velocidad:', startMenuRect.x + 20, startMenuRect.y + 72);
 
       const baseY = startMenuRect.y + 110;
       const cx = startMenuRect.x + 50;
@@ -235,7 +235,7 @@
 
       ctx.fillStyle = '#ccc';
       ctx.font = '12px system-ui, sans-serif';
-      ctx.fillText('Fes clic sobre una icona per canviar la velocitat.', startMenuRect.x + 28, startMenuRect.y + startMenuRect.h - 28);
+      ctx.fillText('haz clic sobre una icona para cambiar la velocidad.', startMenuRect.x + 28, startMenuRect.y + startMenuRect.h - 28);
 
       positionStartButton();
       showStartButton();
