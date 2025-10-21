@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Juego de la serpiente</title>
   <style>
+    .enllac-inici {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 20px;
+  color: white;
+  text-decoration: underline;
+  font-weight: bold;
+  z-index: 1000;
+}
+
+.enllac-inici:hover {
+  color: #f0f0f0;
+}
+
     :root { --wrap-w:400px; }
     body {
       margin: 0;
@@ -51,6 +66,8 @@
   </style>
 </head>
 <body>
+  <a class="enllac-inici" href="https://glsss.netlify.app">inicio</a>
+
   <h1>🐍 Juego de la Serpiente</h1>
 
   <div id="gameWrap">
