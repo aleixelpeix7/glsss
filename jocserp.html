@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Joc de la Serp</title>
+  <style>
+    body {
+      text-align: center;
+      font-family: sans-serif;
+      background-color: #f0f0f0;
+    }
+
+    canvas {
+      background-color: #222;
+      display: block;
+      margin: 0 auto;
+      border: 2px solid #555;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    #score {
+      font-size: 1.2em;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <h1>🐍 Joc de la Serp</h1>
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+  <p id="score">Puntuació: 0</p>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const gridSize = 20;
+    const tileCount = canvas.width / gridSize;
+
+    let snake = [{ x: 10, y: 10 }];
+    let direction = { x: 0, y: 0 };
+    let apple = { x: 5, y: 5 };
+    let score = 0;
+
+    function gameLoop() {
+      update();
+      draw();
+    }
+
+    function update() {
+      const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+      // Col·lisions amb parets
+      if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+        resetGame();
+        return;
+      }
+
+      // Col·lisions amb el cos
+      for (let part of snake) {
+        if (part.x === head.x && part.y === head.y) {
+          resetGame();
+          return;
+        }
+      }
+
+      snake.unshift(head);
+
+      // Menjar la poma
+      if (head.x === apple.x && head.y === apple.y) {
+        score++;
+        document.getElementById("score").textContent = "Puntuació: " + score;
+        placeApple();
+      } else {
+        snake.pop();
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = "#222";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Dibuixar serp
+      ctx.fillStyle = "#0f0";
+      for (let part of snake) {
+        ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
+      }
+
+      // Dibuixar poma
+      ctx.fillStyle = "#f00";
+      ctx.fillRect(apple.x * gridSize, apple.y * gridSize, gridSize - 2, gridSize - 2);
+    }
+
+    function placeApple() {
+      apple.x = Math.floor(Math.random() * tileCount);
+      apple.y = Math.floor(Math.random() * tileCount);
+    }
+
+    function resetGame() {
+      snake = [{ x: 10, y: 10 }];
+      direction = { x: 0, y: 0 };
+      score = 0;
+      document.getElementById("score").textContent = "Puntuació: 0";
+      placeApple();
+    }
+
+    document.addEventListener("keydown", (e) => {
+      switch (e.key) {
+        case "ArrowUp":
+          if (direction.y === 0) direction = { x: 0, y: -1 };
+          break;
+        case "ArrowDown":
+          if (direction.y === 0) direction = { x: 0, y: 1 };
+          break;
+        case "ArrowLeft":
+          if (direction.x === 0) direction = { x: -1, y: 0 };
+          break;
+        case "ArrowRight":
+          if (direction.x === 0) direction = { x: 1, y: 0 };
+          break;
+      }
+    });
+
+    setInterval(gameLoop, 100);
+  </script>
+</body>
+</html>
