@@ -4,6 +4,21 @@
   <meta charset="UTF-8">
   <title>Insultitos|GLS</title>
   <style>
+    .enllac-inici {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 20px;
+  color: white;
+  text-decoration: underline;
+  font-weight: bold;
+  z-index: 1000;
+}
+
+.enllac-inici:hover {
+  color: #f0f0f0;
+}
+
     body {
       background-color:#21BCFF;
       font-family: 'Comic Sans MS', cursive;
@@ -33,6 +48,7 @@
   </style>
 </head>
 <body>
+  <a class="enllac-inici" href="https://glsss.netlify.app">inicio</a>
   <h1>¡Insultitos para tii!</h1>
   <button onclick="lanzarInsulto()">Dame un insulto</button>
   <div id="insulto"></div>
