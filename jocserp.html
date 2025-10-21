@@ -8,23 +8,59 @@
     body {
       text-align: center;
       font-family: sans-serif;
-      background-color: #21BCFF;
+      background-color: #f0f0f0;
+      margin: 0;
     }
 
     canvas {
       background-color: #222;
       display: block;
-      margin: 0 auto;
+      margin: 20px auto;
       border: 2px solid #555;
     }
 
     h1 {
       color: #333;
+      margin-top: 20px;
     }
 
     #score {
       font-size: 1.2em;
       color: #444;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      z-index: 10;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .overlay h2 {
+      font-size: 2em;
+      margin-bottom: 20px;
+    }
+
+    .overlay button {
+      font-size: 1.2em;
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+    }
+
+    #pauseScore {
+      font-size: 2em;
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -32,6 +68,21 @@
   <h1>🐍 Joc de la Serp</h1>
   <canvas id="gameCanvas" width="400" height="400"></canvas>
   <p id="score">Puntuació: 0</p>
+
+  <!-- Menú d'inici -->
+  <div id="startMenu" class="overlay">
+    <h2>Benvingut al joc de la serp!</h2>
+    <button onclick="startGame()">▶️ Jugar</button>
+  </div>
+
+  <!-- Menú de pausa -->
+  <div id="pauseMenu" class="overlay hidden">
+    <h2>⏸ Joc en pausa</h2>
+    <button onclick="resumeGame()">🔄 Continuar</button>
+    <button onclick="resetGame()">🔁 Reiniciar</button>
+    <div id="pauseScore">Puntuació: 0</div>
+  </div>
+
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
@@ -39,15 +90,58 @@
     const gridSize = 20;
     const tileCount = canvas.width / gridSize;
 
-    let snake = [{ x: 10, y: 10 }];
+    let snake = [];
     let direction = { x: 0, y: 0 };
     let apple = { x: 5, y: 5 };
     let score = 0;
-    let gameStarted = false;
+    let gameInterval = null;
+    let paused = false;
+
+    function initSnake() {
+      snake = [
+        { x: 10, y: 10 },
+        { x: 9, y: 10 }
+      ];
+      direction = { x: 0, y: 0 };
+      score = 0;
+      document.getElementById("score").textContent = "Puntuació: 0";
+    }
+
+    function startGame() {
+      document.getElementById("startMenu").classList.add("hidden");
+      initSnake();
+      placeApple();
+      direction = { x: 1, y: 0 };
+      gameInterval = setInterval(gameLoop, 200);
+    }
+
+    function pauseGame() {
+      if (!paused) {
+        paused = true;
+        clearInterval(gameInterval);
+        document.getElementById("pauseScore").textContent = "Puntuació: " + score;
+        document.getElementById("pauseMenu").classList.remove("hidden");
+      }
+    }
+
+    function resumeGame() {
+      if (paused) {
+        paused = false;
+        document.getElementById("pauseMenu").classList.add("hidden");
+        gameInterval = setInterval(gameLoop, 200);
+      }
+    }
+
+    function resetGame() {
+      clearInterval(gameInterval);
+      document.getElementById("pauseMenu").classList.add("hidden");
+      initSnake();
+      placeApple();
+      direction = { x: 1, y: 0 };
+      gameInterval = setInterval(gameLoop, 200);
+    }
 
     function gameLoop() {
-      if (direction.x === 0 && direction.y === 0) return; // No fer res si no ens movem
-
       update();
       draw();
     }
@@ -55,23 +149,15 @@
     function update() {
       const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
 
-      // Col·lisions amb parets
-      if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+      // Col·lisions
+      if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount ||
+          snake.some(part => part.x === head.x && part.y === head.y)) {
         resetGame();
         return;
       }
 
-      // Col·lisions amb el cos
-      for (let part of snake) {
-        if (part.x === head.x && part.y === head.y) {
-          resetGame();
-          return;
-        }
-      }
-
       snake.unshift(head);
 
-      // Menjar la poma
       if (head.x === apple.x && head.y === apple.y) {
         score++;
         document.getElementById("score").textContent = "Puntuació: " + score;
@@ -86,9 +172,21 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Dibuixar serp
-      ctx.fillStyle = "#0f0";
-      for (let part of snake) {
-        ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
+      for (let i = 0; i < snake.length; i++) {
+        if (i === 0) {
+          // Cap amb ulls
+          ctx.fillStyle = "#0f0";
+          ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize - 2, gridSize - 2);
+          ctx.fillStyle = "#00f";
+          const eyeSize = 4;
+          const offsetX = direction.x === 1 ? 10 : direction.x === -1 ? 2 : 6;
+          const offsetY = direction.y === 1 ? 10 : direction.y === -1 ? 2 : 6;
+          ctx.fillRect(snake[i].x * gridSize + offsetX, snake[i].y * gridSize + 4, eyeSize, eyeSize);
+          ctx.fillRect(snake[i].x * gridSize + offsetX, snake[i].y * gridSize + 12, eyeSize, eyeSize);
+        } else {
+          ctx.fillStyle = "#0f0";
+          ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize - 2, gridSize - 2);
+        }
       }
 
       // Dibuixar poma
@@ -101,18 +199,10 @@
       apple.y = Math.floor(Math.random() * tileCount);
     }
 
-    function resetGame() {
-      snake = [{ x: 10, y: 10 }];
-      direction = { x: 0, y: 0 };
-      score = 0;
-      document.getElementById("score").textContent = "Puntuació: 0";
-      placeApple();
-    }
-
     document.addEventListener("keydown", (e) => {
-      if (!gameStarted) {
-        gameStarted = true;
-        setInterval(gameLoop, 200); // Comença el joc amb velocitat més lenta
+      if (e.key === "Escape") {
+        pauseGame();
+        return;
       }
 
       switch (e.key) {
@@ -135,4 +225,3 @@
   </script>
 </body>
 </html>
-
