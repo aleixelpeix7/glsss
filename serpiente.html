@@ -128,6 +128,7 @@
       return internalY * scale;
     }
 
+    // positionStartButton below the panel (unchanged)
     function positionStartButton(){
       const internalX = startMenuRect.x + startMenuRect.w / 2;
       const internalY = startMenuRect.y + startMenuRect.h + 6;
@@ -136,10 +137,14 @@
       startButton.style.transform = 'translateX(-50%)';
     }
 
+    // pause buttons moved closer to center and raised a bit
     function positionPauseButtons(){
-      const leftC_internal = pauseMenuRect.x + 60;
-      const leftR_internal = pauseMenuRect.x + pauseMenuRect.w - 60;
-      const top_internal = pauseMenuRect.y + pauseMenuRect.h - 36;
+      // center the two buttons around the panel center and raise them
+      const panelCenterX = pauseMenuRect.x + pauseMenuRect.w / 2;
+      const offset = 60; // horizontal distance from center to each button
+      const leftC_internal = panelCenterX - offset;
+      const leftR_internal = panelCenterX + offset;
+      const top_internal = pauseMenuRect.y + pauseMenuRect.h - 96; // raised (smaller value = higher)
       pauseContinue.style.left = internalToWrapLeft(leftC_internal) + 'px';
       pauseContinue.style.top  = internalToWrapTop(top_internal) + 'px';
       pauseReset.style.left    = internalToWrapLeft(leftR_internal) + 'px';
@@ -148,9 +153,10 @@
       pauseReset.style.transform = 'translateX(-50%)';
     }
 
+    // game over button moved up and centered
     function positionGameOverButton(){
-      const internalX = gameOverRect.x + gameOverRect.w / 2;
-      const internalY = gameOverRect.y + gameOverRect.h - 36;
+      const internalX = gameOverRect.x + gameOverRect.w / 2; // center
+      const internalY = gameOverRect.y + gameOverRect.h - 110; // raised significantly
       gameOverReset.style.left = internalToWrapLeft(internalX) + 'px';
       gameOverReset.style.top  = internalToWrapTop(internalY) + 'px';
       gameOverReset.style.transform = 'translateX(-50%)';
@@ -329,7 +335,6 @@
       }
 
       if(gameOver){
-        // leave interactions to the gameOverReset HTML button
         return;
       }
     });
@@ -448,7 +453,7 @@
         paused = false;
         gameOver = true;
         hideAllButtons();
-        draw(); // draws cleared board
+        draw();
         drawGameOverMenu();
         return;
       }
