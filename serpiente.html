@@ -137,14 +137,13 @@
       startButton.style.transform = 'translateX(-50%)';
     }
 
-    // pause buttons moved closer to center and raised a bit
+    // pause buttons moved closer to center and slightly lowered compared to previous (lower = larger internalY)
     function positionPauseButtons(){
-      // center the two buttons around the panel center and raise them
       const panelCenterX = pauseMenuRect.x + pauseMenuRect.w / 2;
-      const offset = 60; // horizontal distance from center to each button
+      const offset = 60;
       const leftC_internal = panelCenterX - offset;
       const leftR_internal = panelCenterX + offset;
-      const top_internal = pauseMenuRect.y + pauseMenuRect.h - 96; // raised (smaller value = higher)
+      const top_internal = pauseMenuRect.y + pauseMenuRect.h - 56; // lowered a bit (was -96 earlier)
       pauseContinue.style.left = internalToWrapLeft(leftC_internal) + 'px';
       pauseContinue.style.top  = internalToWrapTop(top_internal) + 'px';
       pauseReset.style.left    = internalToWrapLeft(leftR_internal) + 'px';
@@ -153,10 +152,10 @@
       pauseReset.style.transform = 'translateX(-50%)';
     }
 
-    // game over button moved up and centered
+    // game over button moved down a bit and centered (lower = larger internalY)
     function positionGameOverButton(){
-      const internalX = gameOverRect.x + gameOverRect.w / 2; // center
-      const internalY = gameOverRect.y + gameOverRect.h - 110; // raised significantly
+      const internalX = gameOverRect.x + gameOverRect.w / 2;
+      const internalY = gameOverRect.y + gameOverRect.h - 72; // lowered from -110 to -72
       gameOverReset.style.left = internalToWrapLeft(internalX) + 'px';
       gameOverReset.style.top  = internalToWrapTop(internalY) + 'px';
       gameOverReset.style.transform = 'translateX(-50%)';
