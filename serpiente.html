@@ -3,28 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Juego de la serpiente|GLS</title>
+  <title>Joc de la Serp</title>
   <style>
-    .enllac-inici {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  font-size: 20px;
-  color: #FF2056;
-  text-decoration: underline;
-  font-weight: bold;
-  z-index: 1000;
-}
-
-.enllac-inici:hover {
-  color: #FF637E;
-}
-
     :root { --wrap-w:400px; }
     body {
       margin: 0;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      background:#21BCFF;
+      background:#f0f0f0;
       display:flex;
       flex-direction:column;
       align-items:center;
@@ -49,8 +34,8 @@
     /* transform modificat: només centrar horitzontalment */
     .canvas-button {
       position:absolute;
-      background:#FFDF20;
-      color:#FF2056;
+      background:#fff;
+      color:#111;
       border:1px solid #888;
       padding:8px 12px;
       font-size:14px;
@@ -66,18 +51,17 @@
   </style>
 </head>
 <body>
-  <a class="enllac-inici" href="https://glsss.netlify.app">inicio</a>
-
-  <h1>🐍 Juego de la Serpiente</h1>
+  <h1>🐍 Joc de la Serp</h1>
 
   <div id="gameWrap">
     <canvas id="gameCanvas" width="400" height="400"></canvas>
     <button id="startButton" class="canvas-button hidden" aria-label="Jugar">▶️ Jugar</button>
     <button id="pauseContinue" class="canvas-button hidden" aria-label="Continuar">🔄 Continuar</button>
     <button id="pauseReset" class="canvas-button hidden" aria-label="Reiniciar">🔁 Reiniciar</button>
+    <button id="gameOverReset" class="canvas-button hidden" aria-label="Reiniciar final">🔁 Reiniciar</button>
   </div>
 
-  <p id="score">Puntuacion: 0</p>
+  <p id="score">Puntuació: 0</p>
 
   <script>
     const wrap = document.getElementById('gameWrap');
@@ -86,6 +70,7 @@
     const startButton = document.getElementById('startButton');
     const pauseContinue = document.getElementById('pauseContinue');
     const pauseReset = document.getElementById('pauseReset');
+    const gameOverReset = document.getElementById('gameOverReset');
     const scoreEl = document.getElementById('score');
 
     const INTERNAL_W = canvas.width;
@@ -109,6 +94,7 @@
 
     const startMenuRect = { x:50, y:80, w:300, h:240 };
     const pauseMenuRect = { x:50, y:100, w:300, h:200 };
+    const gameOverRect = { x:50, y:100, w:300, h:200 };
 
     function updateScore(){ scoreEl.textContent = 'Puntuació: ' + score; }
     function clearIntervalSafe(){ if(gameInterval){ clearInterval(gameInterval); gameInterval = null; } }
@@ -147,7 +133,6 @@
       const internalX = startMenuRect.x + startMenuRect.w / 2;
       const internalY = startMenuRect.y + startMenuRect.h + 6; // below panel
       startButton.style.left = (internalToWrapLeft(internalX)) + 'px';
-      // add a few pixels so button is clearly below the text/panel
       startButton.style.top  = (internalToWrapTop(internalY) + 8)  + 'px';
       startButton.style.transform = 'translateX(-50%)';
     }
@@ -164,11 +149,21 @@
       pauseReset.style.transform = 'translateX(-50%)';
     }
 
+    function positionGameOverButton(){
+      const internalX = gameOverRect.x + gameOverRect.w / 2;
+      const internalY = gameOverRect.y + gameOverRect.h - 36;
+      gameOverReset.style.left = internalToWrapLeft(internalX) + 'px';
+      gameOverReset.style.top  = internalToWrapTop(internalY) + 'px';
+      gameOverReset.style.transform = 'translateX(-50%)';
+    }
+
     function showStartButton(){ startButton.classList.remove('hidden'); }
     function hideStartButton(){ startButton.classList.add('hidden'); }
     function showPauseButtons(){ pauseContinue.classList.remove('hidden'); pauseReset.classList.remove('hidden'); }
     function hidePauseButtons(){ pauseContinue.classList.add('hidden'); pauseReset.classList.add('hidden'); }
-    function hideAllButtons(){ hideStartButton(); hidePauseButtons(); }
+    function showGameOverButton(){ gameOverReset.classList.remove('hidden'); }
+    function hideGameOverButton(){ gameOverReset.classList.add('hidden'); }
+    function hideAllButtons(){ hideStartButton(); hidePauseButtons(); hideGameOverButton(); }
 
     function draw(){
       ctx.clearRect(0,0,INTERNAL_W,INTERNAL_H);
@@ -222,9 +217,9 @@
       ctx.fillRect(startMenuRect.x, startMenuRect.y, startMenuRect.w, startMenuRect.h);
       ctx.fillStyle = '#fff';
       ctx.font = '18px system-ui, sans-serif';
-      ctx.fillText('Bienvenido al juego de la serpiente!', startMenuRect.x + 20, startMenuRect.y + 38);
+      ctx.fillText('Benvingut al joc de la serp!', startMenuRect.x + 20, startMenuRect.y + 38);
       ctx.font = '14px system-ui, sans-serif';
-      ctx.fillText('Selecciona la velocidad:', startMenuRect.x + 20, startMenuRect.y + 72);
+      ctx.fillText('Selecciona la velocitat:', startMenuRect.x + 20, startMenuRect.y + 72);
 
       const baseY = startMenuRect.y + 110;
       const cx = startMenuRect.x + 50;
@@ -235,7 +230,7 @@
 
       ctx.fillStyle = '#ccc';
       ctx.font = '12px system-ui, sans-serif';
-      ctx.fillText('haz clic sobre una icona para cambiar la velocidad.', startMenuRect.x + 28, startMenuRect.y + startMenuRect.h - 28);
+      ctx.fillText('Fes clic sobre una icona per canviar la velocitat.', startMenuRect.x + 28, startMenuRect.y + startMenuRect.h - 28);
 
       positionStartButton();
       showStartButton();
@@ -277,6 +272,18 @@
 
       positionPauseButtons();
       showPauseButtons();
+    }
+
+    function drawGameOverMenu(){
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      ctx.fillRect(gameOverRect.x, gameOverRect.y, gameOverRect.w, gameOverRect.h);
+      ctx.fillStyle = '#fff';
+      ctx.font = '20px system-ui, sans-serif';
+      ctx.fillText('💀 Has perdut!', gameOverRect.x + 110, gameOverRect.y + 48);
+      ctx.font = '18px system-ui, sans-serif';
+      ctx.fillText('Puntuació final: ' + score, gameOverRect.x + 100, gameOverRect.y + 92);
+      positionGameOverButton();
+      showGameOverButton();
     }
 
     function getWrapScale(){
@@ -330,6 +337,10 @@
     });
     pauseContinue.addEventListener('click', ()=> resumeGame());
     pauseReset.addEventListener('click', ()=> { resetToMenu(); });
+    gameOverReset.addEventListener('click', ()=> {
+      hideGameOverButton();
+      resetToMenu();
+    });
 
     document.addEventListener('keydown', (e)=>{
       if(!gameStarted){
@@ -421,9 +432,14 @@
 
       const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
 
+      // collision -> show game over menu with final score
       if(head.x < 0 || head.x >= tileCountX || head.y < 0 || head.y >= tileCountY ||
          snake.some(p => p.x === head.x && p.y === head.y)){
-        resetToMenu();
+        clearIntervalSafe();
+        gameStarted = false;
+        paused = false;
+        draw();
+        drawGameOverMenu();
         return;
       }
 
@@ -441,6 +457,8 @@
     function updateButtonPositions(){
       if(!gameStarted) positionStartButton();
       if(paused) positionPauseButtons();
+      if(!gameStarted && gameOverReset.classList.contains('hidden')) positionStartButton();
+      if(!gameStarted && !gameOverReset.classList.contains('hidden')) positionGameOverButton();
     }
     window.addEventListener('resize', updateButtonPositions);
     window.addEventListener('orientationchange', updateButtonPositions);
@@ -465,5 +483,3 @@
   </script>
 </body>
 </html>
-
-
