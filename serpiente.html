@@ -5,6 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Juego de la serpiente|GLS</title>
   <style>
+    .enllac-inici {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 20px;
+  color: white;
+  text-decoration: underline;
+  font-weight: bold;
+  z-index: 1000;
+}
+
+.enllac-inici:hover {
+  color: #f0f0f0;
+}
     :root { --wrap-w:400px; }
     body {
       margin: 0;
@@ -34,7 +48,7 @@
     .canvas-button {
       position:absolute;
       background:#FFDF20;
-      color:#4F39F6;
+      color:#FB2C36;
       border:1px solid #888;
       padding:8px 12px;
       font-size:14px;
@@ -50,6 +64,7 @@
   </style>
 </head>
 <body>
+  <a class="enllac-inici" href="https://glsss.netlify.app">inicio</a>
   <h1>🐍 Juego de la serpiente</h1>
 
   <div id="gameWrap">
