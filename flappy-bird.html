@@ -4,19 +4,34 @@
   <meta charset="UTF-8">
   <title>Flappy Bird Aleix</title>
   <style>
-    body { margin: 0; overflow: hidden; background: skyblue; }
-    canvas { display: block; margin: auto; background: #87CEEB; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: skyblue;
+    }
+    canvas {
+      display: block;
+      background: #87CEEB;
+    }
   </style>
 </head>
 <body>
-  <canvas id="game" width="400" height="600"></canvas>
+  <canvas id="game"></canvas>
   <script>
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
 
-    let birdY = 250, birdV = 0;
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    let birdY = canvas.height / 2, birdV = 0;
     const gravity = 0.5, jump = -8;
-    const birdSize = 20;
+    const birdSize = 30;
 
     let pipes = [];
     let frame = 0;
@@ -30,28 +45,28 @@
 
     function drawBird() {
       ctx.fillStyle = "yellow";
-      ctx.fillRect(50, birdY, birdSize, birdSize);
+      ctx.fillRect(canvas.width * 0.2, birdY, birdSize, birdSize);
     }
 
     function drawPipe(pipe) {
       ctx.fillStyle = "green";
-      ctx.fillRect(pipe.x, 0, 40, pipe.top);
-      ctx.fillRect(pipe.x, pipe.top + pipe.gap, 40, canvas.height - (pipe.top + pipe.gap));
+      ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
+      ctx.fillRect(pipe.x, pipe.top + pipe.gap, pipe.width, canvas.height - (pipe.top + pipe.gap));
     }
 
     function drawGameOver() {
       ctx.fillStyle = "rgba(0,0,0,0.5)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "white";
-      ctx.font = "30px Arial";
-      ctx.fillText("Game Over", 120, 250);
-      ctx.font = "20px Arial";
-      ctx.fillText("Punts: " + score, 160, 290);
-      ctx.fillText("Prem una tecla per reiniciar", 70, 330);
+      ctx.font = "40px Arial";
+      ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2 - 40);
+      ctx.font = "24px Arial";
+      ctx.fillText("Punts: " + score, canvas.width / 2 - 40, canvas.height / 2);
+      ctx.fillText("Prem una tecla per reiniciar", canvas.width / 2 - 140, canvas.height / 2 + 40);
     }
 
     function restartGame() {
-      birdY = 250;
+      birdY = canvas.height / 2;
       birdV = 0;
       pipes = [];
       frame = 0;
@@ -72,29 +87,35 @@
       birdY += birdV;
 
       if (frame % 90 === 0) {
-        const top = Math.random() * 300 + 50;
-        pipes.push({ x: canvas.width, top: top, gap: 150 });
+        const top = Math.random() * (canvas.height - 300) + 50;
+        pipes.push({
+          x: canvas.width,
+          top: top,
+          gap: 200,
+          width: 60
+        });
       }
 
       pipes.forEach(pipe => {
-        pipe.x -= 2;
+        pipe.x -= 3;
         drawPipe(pipe);
 
+        const birdX = canvas.width * 0.2;
         if (
-          50 + birdSize > pipe.x && 50 < pipe.x + 40 &&
+          birdX + birdSize > pipe.x && birdX < pipe.x + pipe.width &&
           (birdY < pipe.top || birdY > pipe.top + pipe.gap)
         ) {
           gameOver = true;
         }
 
-        if (pipe.x + 40 === 50) score++;
+        if (pipe.x + pipe.width === Math.floor(birdX)) score++;
       });
 
       drawBird();
 
       ctx.fillStyle = "black";
-      ctx.font = "20px Arial";
-      ctx.fillText("Punts: " + score, 10, 30);
+      ctx.font = "24px Arial";
+      ctx.fillText("Punts: " + score, 20, 40);
 
       frame++;
       requestAnimationFrame(update);
