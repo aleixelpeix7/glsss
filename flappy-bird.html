@@ -2,11 +2,12 @@
 <html lang="ca">
 <head>
   <meta charset="utf-8" />
-  <title>Flappy Bird Aleix - Ajustat</title>
+  <title>Flappy Bird Aleix - Fix</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    html,body { margin:0; padding:0; height:100%; overflow:hidden; background:#87CEEB; }
-    canvas { display:block; background: linear-gradient(#87CEEB,#cfeefd 70%); width:100vw; height:100vh; }
+    html, body { margin:0; height:100%; overflow:hidden; background:#87CEEB; }
+    /* No posem width/height CSS al canvas per evitar escalat; el controlem per JS */
+    canvas { display:block; background: linear-gradient(#87CEEB,#cfeefd 70%); }
   </style>
 </head>
 <body>
@@ -15,36 +16,43 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      // recalcula mides dependents si cal
-      birdSize = Math.max(20, Math.min(48, Math.floor(canvas.width * 0.04)));
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    // Bird
+    // Estat global
+    let birdSize;
     const birdXratio = 0.2;
-    let birdY = canvas.height * 0.5;
+    let birdY = 0;
     let birdV = 0;
-    let birdSize = Math.max(20, Math.min(48, Math.floor(canvas.width * 0.04)));
     const gravity = 0.55;
     const jump = -10;
 
-    // Pipes - configuració per semblar l'original
     let pipes = [];
     let frame = 0;
     let score = 0;
     let gameOver = false;
 
-    const pipeWidth = 52;                 // amplada constant com en l'original
-    const minGap = Math.floor(birdSize * 3.0);  // forats una mica més grans
-    const maxGap = Math.floor(birdSize * 3.6);
-    const minPipeInterval = 90;          // separació més semblant a l'original
+    // Paràmetres similars a l'original
+    const pipeWidth = 52;
+    let minGap, maxGap;
+    const minPipeInterval = 90;
     const maxPipeInterval = 120;
-    let nextPipeIn = randInt(minPipeInterval, maxPipeInterval);
-    const pipeSpeed = 2.6;               // velocitat constant
+    let nextPipeIn;
+
+    const pipeSpeed = 2.6;
+
+    // Redimensiona canvas i recalcula mides dependents
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      birdSize = Math.max(20, Math.min(48, Math.floor(canvas.width * 0.04)));
+      minGap = Math.floor(birdSize * 3.0);
+      maxGap = Math.floor(birdSize * 3.6);
+      // Ajusta birdY perquè no salti fora al redimensionar
+      if (birdY === 0) birdY = canvas.height * 0.5;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function randInt(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
+    nextPipeIn = randInt(minPipeInterval, maxPipeInterval);
 
     // Controls
     function flap() {
@@ -55,23 +63,21 @@
     window.addEventListener('mousedown', flap);
     window.addEventListener('touchstart', e => { e.preventDefault(); flap(); }, {passive:false});
 
-    function randInt(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
-
     function spawnPipe() {
       const gap = randInt(minGap, maxGap);
       const margin = Math.floor(canvas.height * 0.08);
-      const top = randInt(margin, canvas.height - gap - margin);
+      const top = randInt(margin, Math.max(margin, canvas.height - gap - margin));
       pipes.push({ x: canvas.width + pipeWidth, top, gap, width: pipeWidth, speed: pipeSpeed, scored:false });
       nextPipeIn = randInt(minPipeInterval, maxPipeInterval);
     }
 
     function drawBird() {
-      ctx.fillStyle = 'yellow';
       const bx = Math.floor(canvas.width * birdXratio);
       ctx.save();
       const ang = Math.max(-0.6, Math.min(0.6, birdV * 0.03));
       ctx.translate(bx + birdSize/2, birdY + birdSize/2);
       ctx.rotate(ang);
+      ctx.fillStyle = 'yellow';
       ctx.fillRect(-birdSize/2, -birdSize/2, birdSize, birdSize);
       ctx.restore();
     }
@@ -90,8 +96,6 @@
       const h = Math.max(24, Math.floor(canvas.height * 0.06));
       ctx.fillStyle = '#c27c2f';
       ctx.fillRect(0, canvas.height - h, canvas.width, h);
-      ctx.fillStyle = '#9d5d20';
-      for (let i=0;i<canvas.width;i+=40) ctx.fillRect(i, canvas.height - h, 20, 6);
     }
 
     function drawUI() {
@@ -104,7 +108,7 @@
       const bx = Math.floor(canvas.width * birdXratio);
       const groundHeight = Math.max(24, Math.floor(canvas.height * 0.06));
       if (birdY + birdSize >= canvas.height - groundHeight) {
-        gameOver = true; // mort immediata en tocar terra
+        gameOver = true;
         return;
       }
       if (birdY <= 0) {
@@ -146,7 +150,6 @@
     }
 
     function restart() {
-      birdSize = Math.max(20, Math.min(48, Math.floor(canvas.width * 0.04)));
       birdY = canvas.height * 0.5;
       birdV = 0;
       pipes = [];
@@ -171,14 +174,17 @@
 
     function draw() {
       ctx.clearRect(0,0,canvas.width,canvas.height);
+      // física
       birdV += gravity;
       birdY += birdV;
 
+      // spawn pipes
       if (nextPipeIn <= 0) spawnPipe();
       else nextPipeIn--;
 
       updatePipes();
 
+      // dibuixos
       for (const p of pipes) drawPipe(p);
       drawGround();
       drawBird();
@@ -188,7 +194,8 @@
       frame++;
     }
 
-    // Inicia
+    // Inicia el joc després d'assegurar la mida correcta
+    resize();
     loop();
   </script>
 </body>
