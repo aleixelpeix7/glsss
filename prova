@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>¿Otra vez clic?</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive;
+      text-align: center;
+      padding-top: 100px;
+      background-color: #f0f0f0;
+    }
+    h1 {
+      color: #333;
+    }
+    #respuesta {
+      font-size: 24px;
+      margin-top: 30px;
+      color: #444;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      background-color: #66ccff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: white;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #3399ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>¡Hola! ¿Quieres hacer clic?</h1>
+  <button id="boton">Haz clic aquí</button>
+  <div id="respuesta"></div>
+
+  <script>
+    let contador = 0;
+
+    const respuestas = [
+      "¡Qué bien! Primer clic, todo correcto.",
+      "Segundo clic... ¿Te gusta pulsar botones ehhh?",
+      "Tercer clic... ¿No tienes otra cosa que hacer?",
+      "Cuarto clic... Esto ya es preocupante.",
+      "Quinto clic... Sigue apretando que llegaras creca",
+      "Sexto clic... ¿Estas pesadito ehh?",
+      "Séptimo clic... Madre mia esto ya es obsesión.",
+      "Octavo clic... ¿Sabes que esto no da puntos?",
+      "Noveno clic... ¿Estás intentando romper el botón?",
+      "Décimo clic... Vale, ya basta. ¡Vete a la mierda!"
+    ];
+
+    document.getElementById("boton").addEventListener("click", function() {
+      const respuestaDiv = document.getElementById("respuesta");
+      if (contador < respuestas.length) {
+        respuestaDiv.innerText = respuestas[contador];
+      } else {
+        respuestaDiv.innerText = "Ya no pienso responderte. 😒";
+      }
+      contador++;
+    });
+  </script>
+</body>
+</html>
