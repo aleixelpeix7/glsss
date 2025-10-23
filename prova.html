@@ -4,11 +4,25 @@
   <meta charset="UTF-8">
   <title>¿Otra vez clic?</title>
   <style>
+      .enllac-inici {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 20px;
+  color: #FF2056;
+  text-decoration: underline;
+  font-weight: bold;
+  z-index: 1000;
+}
+
+.enllac-inici:hover {
+  color: #FF637E;
+}
     body {
       font-family: 'Comic Sans MS', cursive;
       text-align: center;
       padding-top: 100px;
-      background-color: #f0f0f0;
+      background-color: #21BCFF;
     }
     h1 {
       color: #333;
@@ -16,12 +30,12 @@
     #respuesta {
       font-size: 24px;
       margin-top: 30px;
-      color: #444;
+      color: #FB2C36;
     }
     button {
       padding: 15px 30px;
       font-size: 18px;
-      background-color: #66ccff;
+      background-color:#9AE630;
       border: none;
       border-radius: 10px;
       cursor: pointer;
@@ -29,11 +43,12 @@
       margin-top: 20px;
     }
     button:hover {
-      background-color: #3399ff;
+      background-color: #BBF451;
     }
   </style>
 </head>
 <body>
+  <a class="enllac-inici" href="https://glsss.netlify.app">inicio</a>
   <h1>¡Hola! ¿Quieres hacer clic?</h1>
   <button id="boton">Haz clic aquí</button>
   <div id="respuesta"></div>
