@@ -21,8 +21,12 @@
     let pipes = [];
     let frame = 0;
     let score = 0;
+    let gameOver = false;
 
-    document.addEventListener("keydown", () => birdV = jump);
+    document.addEventListener("keydown", () => {
+      if (!gameOver) birdV = jump;
+      else restartGame();
+    });
 
     function drawBird() {
       ctx.fillStyle = "yellow";
@@ -32,17 +36,43 @@
     function drawPipe(pipe) {
       ctx.fillStyle = "green";
       ctx.fillRect(pipe.x, 0, 40, pipe.top);
-      ctx.fillRect(pipe.x, pipe.top + pipe.gap, 40, canvas.height);
+      ctx.fillRect(pipe.x, pipe.top + pipe.gap, 40, canvas.height - (pipe.top + pipe.gap));
+    }
+
+    function drawGameOver() {
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "white";
+      ctx.font = "30px Arial";
+      ctx.fillText("Game Over", 120, 250);
+      ctx.font = "20px Arial";
+      ctx.fillText("Punts: " + score, 160, 290);
+      ctx.fillText("Prem una tecla per reiniciar", 70, 330);
+    }
+
+    function restartGame() {
+      birdY = 250;
+      birdV = 0;
+      pipes = [];
+      frame = 0;
+      score = 0;
+      gameOver = false;
+      update();
     }
 
     function update() {
+      if (gameOver) {
+        drawGameOver();
+        return;
+      }
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       birdV += gravity;
       birdY += birdV;
 
       if (frame % 90 === 0) {
-        const top = Math.random() * 300;
+        const top = Math.random() * 300 + 50;
         pipes.push({ x: canvas.width, top: top, gap: 150 });
       }
 
@@ -50,13 +80,11 @@
         pipe.x -= 2;
         drawPipe(pipe);
 
-        // Col·lisions
         if (
           50 + birdSize > pipe.x && 50 < pipe.x + 40 &&
           (birdY < pipe.top || birdY > pipe.top + pipe.gap)
         ) {
-          alert("Game Over! Puntuació: " + score);
-          document.location.reload();
+          gameOver = true;
         }
 
         if (pipe.x + 40 === 50) score++;
@@ -76,4 +104,3 @@
   </script>
 </body>
 </html>
-
