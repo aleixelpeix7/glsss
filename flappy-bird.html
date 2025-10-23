@@ -86,12 +86,19 @@
       birdV += gravity;
       birdY += birdV;
 
-      if (frame % 90 === 0) {
-        const top = Math.random() * (canvas.height - 300) + 50;
+      // Generació de tubs més separats, amb forats petits i aleatoris
+      if (frame % 130 === 0) {
+        const minGap = 100;
+        const maxGap = 140;
+        const gap = Math.floor(Math.random() * (maxGap - minGap)) + minGap;
+
+        const margin = 50;
+        const top = Math.floor(Math.random() * (canvas.height - gap - margin * 2)) + margin;
+
         pipes.push({
           x: canvas.width,
           top: top,
-          gap: 200,
+          gap: gap,
           width: 60
         });
       }
