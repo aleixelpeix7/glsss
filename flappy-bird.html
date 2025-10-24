@@ -2,12 +2,11 @@
 <html lang="ca">
 <head>
   <meta charset="utf-8" />
-  <title>Flappy Bird Aleix - Fix</title>
+  <title>Flappy Bird - Closer to Original</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    html, body { margin:0; height:100%; overflow:hidden; background:#87CEEB; }
-    /* No posem width/height CSS al canvas per evitar escalat; el controlem per JS */
-    canvas { display:block; background: linear-gradient(#87CEEB,#cfeefd 70%); }
+    html,body { margin:0; height:100%; background:#70c5ce; overflow:hidden; }
+    canvas { display:block; margin:0 auto; background: linear-gradient(#70c5ce,#a6e0e6 70%); }
   </style>
 </head>
 <body>
@@ -16,59 +15,55 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
-    // Estat global
-    let birdSize;
+    // Resize canvas to device pixels (no CSS width/height)
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      birdSize = Math.max(18, Math.min(46, Math.floor(canvas.width * 0.04)));
+      groundH = Math.max(24, Math.floor(canvas.height * 0.06));
+      minGap = Math.floor(birdSize * 2.6); // gap aprox original feel
+      maxGap = Math.floor(birdSize * 3.2);
+      pipeXstart = canvas.width + pipeWidth;
+    }
+    window.addEventListener('resize', resize);
+
+    // Game params (tuned)
+    let birdSize = 36;
     const birdXratio = 0.2;
     let birdY = 0;
     let birdV = 0;
-    const gravity = 0.55;
-    const jump = -10;
+    const gravity = 0.48;
+    const jump = -9.2;
+
+    const pipeWidth = 52;   // amplada fixa com l'original
+    let minGap = 100, maxGap = 140;
+    const pipeSpeed = 2.6;
+    const pipeInterval = 100; // frames entre tubs (const per sensació original)
 
     let pipes = [];
     let frame = 0;
     let score = 0;
     let gameOver = false;
-
-    // Paràmetres similars a l'original
-    const pipeWidth = 52;
-    let minGap, maxGap;
-    const minPipeInterval = 90;
-    const maxPipeInterval = 120;
-    let nextPipeIn;
-
-    const pipeSpeed = 2.6;
-
-    // Redimensiona canvas i recalcula mides dependents
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      birdSize = Math.max(20, Math.min(48, Math.floor(canvas.width * 0.04)));
-      minGap = Math.floor(birdSize * 3.0);
-      maxGap = Math.floor(birdSize * 3.6);
-      // Ajusta birdY perquè no salti fora al redimensionar
-      if (birdY === 0) birdY = canvas.height * 0.5;
-    }
-    window.addEventListener('resize', resize);
+    let groundH = 40;
+    let pipeXstart = 0;
     resize();
-
-    function randInt(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
-    nextPipeIn = randInt(minPipeInterval, maxPipeInterval);
 
     // Controls
     function flap() {
       if (!gameOver) birdV = jump;
       else restart();
     }
-    window.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); flap(); } });
+    window.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); flap(); }});
     window.addEventListener('mousedown', flap);
     window.addEventListener('touchstart', e => { e.preventDefault(); flap(); }, {passive:false});
+
+    function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
 
     function spawnPipe() {
       const gap = randInt(minGap, maxGap);
       const margin = Math.floor(canvas.height * 0.08);
-      const top = randInt(margin, Math.max(margin, canvas.height - gap - margin));
-      pipes.push({ x: canvas.width + pipeWidth, top, gap, width: pipeWidth, speed: pipeSpeed, scored:false });
-      nextPipeIn = randInt(minPipeInterval, maxPipeInterval);
+      const top = randInt(margin, Math.max(margin, canvas.height - gap - margin - groundH));
+      pipes.push({ x: pipeXstart, top, gap, width: pipeWidth, speed: pipeSpeed, scored:false });
     }
 
     function drawBird() {
@@ -77,8 +72,11 @@
       const ang = Math.max(-0.6, Math.min(0.6, birdV * 0.03));
       ctx.translate(bx + birdSize/2, birdY + birdSize/2);
       ctx.rotate(ang);
-      ctx.fillStyle = 'yellow';
+      ctx.fillStyle = '#ffd54a';
       ctx.fillRect(-birdSize/2, -birdSize/2, birdSize, birdSize);
+      // eye
+      ctx.fillStyle = '#222';
+      ctx.fillRect(birdSize*0.12, -birdSize*0.12, Math.max(3, Math.floor(birdSize*0.12)), Math.max(3, Math.floor(birdSize*0.12)));
       ctx.restore();
     }
 
@@ -93,21 +91,22 @@
     }
 
     function drawGround() {
-      const h = Math.max(24, Math.floor(canvas.height * 0.06));
       ctx.fillStyle = '#c27c2f';
-      ctx.fillRect(0, canvas.height - h, canvas.width, h);
+      ctx.fillRect(0, canvas.height - groundH, canvas.width, groundH);
+      ctx.fillStyle = '#9d5d20';
+      for (let i=0;i<canvas.width;i+=40) ctx.fillRect(i, canvas.height - groundH, 20, 6);
     }
 
     function drawUI() {
-      ctx.fillStyle = 'black';
-      ctx.font = `${Math.max(16, Math.floor(canvas.width*0.02))}px Arial`;
+      ctx.fillStyle = '#000';
+      ctx.font = `${Math.max(16, Math.floor(canvas.width*0.03))}px Arial`;
       ctx.fillText('Punts: ' + score, 16, 36);
     }
 
     function checkCollisions() {
       const bx = Math.floor(canvas.width * birdXratio);
-      const groundHeight = Math.max(24, Math.floor(canvas.height * 0.06));
-      if (birdY + birdSize >= canvas.height - groundHeight) {
+      // ground collision => immediate death
+      if (birdY + birdSize >= canvas.height - groundH) {
         gameOver = true;
         return;
       }
@@ -133,7 +132,7 @@
           p.scored = true;
         }
       }
-      pipes = pipes.filter(p => p.x + p.width > -50);
+      pipes = pipes.filter(p => p.x + p.width > -60);
     }
 
     function drawGameOver() {
@@ -150,17 +149,23 @@
     }
 
     function restart() {
+      birdSize = Math.max(18, Math.min(46, Math.floor(canvas.width * 0.04)));
       birdY = canvas.height * 0.5;
       birdV = 0;
       pipes = [];
       frame = 0;
       score = 0;
       gameOver = false;
-      nextPipeIn = randInt(minPipeInterval, maxPipeInterval);
+      pipeXstart = canvas.width + pipeWidth;
+      // spawn initial pipes to match pacing
+      for (let i=0;i<3;i++){
+        spawnPipe();
+        for (let j=0;j<randInt(60,120);j++) frame++;
+      }
       loop();
     }
 
-    // Bucle principal
+    // Main loop
     let rafId = null;
     function loop() {
       if (gameOver) {
@@ -174,17 +179,16 @@
 
     function draw() {
       ctx.clearRect(0,0,canvas.width,canvas.height);
-      // física
+      // physics
       birdV += gravity;
       birdY += birdV;
 
-      // spawn pipes
-      if (nextPipeIn <= 0) spawnPipe();
-      else nextPipeIn--;
+      // spawn at fixed interval like original
+      if (frame % pipeInterval === 0) spawnPipe();
 
       updatePipes();
 
-      // dibuixos
+      // draw order
       for (const p of pipes) drawPipe(p);
       drawGround();
       drawBird();
@@ -194,9 +198,9 @@
       frame++;
     }
 
-    // Inicia el joc després d'assegurar la mida correcta
+    // init
     resize();
-    loop();
+    restart();
   </script>
 </body>
 </html>
