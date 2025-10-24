@@ -33,12 +33,24 @@
       background-color: #888;
       border-radius: 10px;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: filter 0.15s, transform 0.12s;
+      display: inline-block;
+    }
+    .cuadro:active {
+      transform: scale(0.98);
     }
     #mensaje {
       font-size: 20px;
       margin-top: 20px;
       color: #444;
+    }
+    .visually-hidden {
+      position: absolute;
+      left: -10000px;
+      top: auto;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
     }
   </style>
 </head>
@@ -46,12 +58,38 @@
   <h1>🧠 Memoria Visual Pro</h1>
   <div id="nivel">Nivel: 1</div>
   <div id="puntos">Puntos: 0</div>
-  <div id="cuadros"></div>
-  <div id="mensaje"></div>
+  <div id="cuadros" role="grid" aria-label="Tauler de memòria"></div>
+  <div id="mensaje" role="status" aria-live="polite"></div>
+  <div class="visually-hidden" id="instruccio">Repeteix la seqüència de colors amb clics o toc.</div>
 
   <script>
     window.onload = function () {
-      const colores = ["#ff6666", "#66ccff", "#99ff99", "#ffcc66", "#cc99ff", "#ff99cc", "#66ffcc", "#ccccff", "#ff9966"];
+      // Colors fixes per cada quadrat (index 0..8)
+      const coloresFijos = [
+        "#ff6666", // 0
+        "#66ccff", // 1
+        "#99ff99", // 2
+        "#ffcc66", // 3
+        "#cc99ff", // 4
+        "#ff99cc", // 5
+        "#66ffcc", // 6
+        "#ccccff", // 7
+        "#ff9966"  // 8
+      ];
+
+      // Frequències (Hz) per cada quadrat per al pitido
+      const frecuencias = [
+        440, // La4
+        523.25, // Do5
+        659.25, // Mi5
+        784, // Sol5
+        987.77, // Si5
+        1318.51, // Mi6
+        349.23, // Fa4
+        293.66, // Re4
+        587.33 // Re5
+      ];
+
       const cuadrosContainer = document.getElementById("cuadros");
       const mensaje = document.getElementById("mensaje");
       const nivelTexto = document.getElementById("nivel");
@@ -65,11 +103,40 @@
       let tiempoLimite;
       let tiempoMaximo = 3500; // 3.5 segundos
 
-      // Crear 9 cuadros dinámicamente
+      // Web Audio setup
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      let audioCtx = null;
+
+      function ensureAudioContext() {
+        if (!audioCtx) {
+          audioCtx = new AudioContext();
+        }
+      }
+
+      function playTone(freq, duration = 300, type = 'sine') {
+        ensureAudioContext();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.12, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration / 1000);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + duration / 1000 + 0.02);
+      }
+
+      // Crear 9 quadrats amb color fix i atributs ARIA
       for (let i = 0; i < 9; i++) {
         const cuadro = document.createElement("div");
         cuadro.classList.add("cuadro");
         cuadro.setAttribute("data-id", i);
+        cuadro.setAttribute("role", "button");
+        cuadro.setAttribute("aria-label", "Quadrat " + (i + 1));
+        cuadro.style.backgroundColor = coloresFijos[i];
         cuadrosContainer.appendChild(cuadro);
       }
 
@@ -82,23 +149,32 @@
         mostrarSecuencia();
       }
 
+      function iluminarCuadro(id, dur = 300) {
+        const cuadro = document.querySelector(`.cuadro[data-id="${id}"]`);
+        if (!cuadro) return;
+        // Efecte d'il·luminació amb filtre
+        cuadro.style.filter = "brightness(1.6) drop-shadow(0 6px 12px rgba(0,0,0,0.25))";
+        playTone(frecuencias[id], dur);
+        setTimeout(() => {
+          cuadro.style.filter = "";
+        }, dur);
+      }
+
       function mostrarSecuencia() {
         let i = 0;
         const intervalo = setInterval(() => {
           const id = secuencia[i];
-          const cuadro = document.querySelector(`.cuadro[data-id="${id}"]`);
-          const color = colores[Math.floor(Math.random() * colores.length)];
-          cuadro.style.backgroundColor = color;
-          setTimeout(() => {
-            cuadro.style.backgroundColor = "#888";
-          }, 300);
+          iluminarCuadro(id, 300);
           i++;
           if (i >= secuencia.length) {
             clearInterval(intervalo);
-            esperandoInput = true;
-            iniciarTemporizador();
+            // petita pausa abans d'acceptar input
+            setTimeout(() => {
+              esperandoInput = true;
+              iniciarTemporizador();
+            }, 200);
           }
-        }, 400);
+        }, 500); // temps entre il·luminacions
       }
 
       function iniciarTemporizador() {
@@ -124,15 +200,28 @@
 
       cuadros.forEach(cuadro => {
         cuadro.addEventListener("click", () => {
+          // Activar audio context amb primer interacte
+          ensureAudioContext();
           if (!esperandoInput) return;
           clearTimeout(tiempoLimite);
           const id = parseInt(cuadro.getAttribute("data-id"));
           jugador.push(id);
-          cuadro.style.backgroundColor = "#00cc66";
+          // efecte visual i so local
+          cuadro.style.filter = "brightness(1.6) drop-shadow(0 6px 12px rgba(0,0,0,0.25))";
+          playTone(frecuencias[id], 220);
           setTimeout(() => {
-            cuadro.style.backgroundColor = "#888";
-          }, 300);
+            cuadro.style.filter = "";
+          }, 220);
           verificar();
+        });
+
+        // millora per accessibilitat amb teclat
+        cuadro.tabIndex = 0;
+        cuadro.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            cuadro.click();
+          }
         });
       });
 
@@ -166,10 +255,11 @@
             nuevaSecuencia();
           }, 1000);
         } else {
-          iniciarTemporizador(); // reinicia el temporizador tras cada clic correcto
+          iniciarTemporizador(); // reinicia el temporitzador tras cada clic correcte
         }
       }
 
+      // Comença el joc
       nuevaSecuencia();
     };
   </script>
