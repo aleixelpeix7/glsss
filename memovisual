@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Memoria Visual Pro</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #ffcccc, #ccffff);
+      min-height: 100vh;
+    }
+    h1 {
+      margin-top: 30px;
+      color: #333;
+    }
+    #nivel, #puntos {
+      font-size: 22px;
+      margin-top: 10px;
+    }
+    #cuadros {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 15px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .cuadro {
+      width: 100px;
+      height: 100px;
+      background-color: #888;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #mensaje {
+      font-size: 20px;
+      margin-top: 20px;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧠 Memoria Visual Pro</h1>
+  <div id="nivel">Nivel: 1</div>
+  <div id="puntos">Puntos: 0</div>
+  <div id="cuadros"></div>
+  <div id="mensaje"></div>
+
+  <script>
+    window.onload = function () {
+      const colores = ["#ff6666", "#66ccff", "#99ff99", "#ffcc66", "#cc99ff", "#ff99cc", "#66ffcc", "#ccccff", "#ff9966"];
+      const cuadrosContainer = document.getElementById("cuadros");
+      const mensaje = document.getElementById("mensaje");
+      const nivelTexto = document.getElementById("nivel");
+      const puntosTexto = document.getElementById("puntos");
+
+      let secuencia = [];
+      let jugador = [];
+      let nivel = 1;
+      let puntos = 0;
+      let esperandoInput = false;
+      let tiempoLimite;
+      let tiempoMaximo = 3500; // 3.5 segundos
+
+      // Crear 9 cuadros dinámicamente
+      for (let i = 0; i < 9; i++) {
+        const cuadro = document.createElement("div");
+        cuadro.classList.add("cuadro");
+        cuadro.setAttribute("data-id", i);
+        cuadrosContainer.appendChild(cuadro);
+      }
+
+      const cuadros = document.querySelectorAll(".cuadro");
+
+      function nuevaSecuencia() {
+        jugador = [];
+        esperandoInput = false;
+        secuencia.push(Math.floor(Math.random() * 9));
+        mostrarSecuencia();
+      }
+
+      function mostrarSecuencia() {
+        let i = 0;
+        const intervalo = setInterval(() => {
+          const id = secuencia[i];
+          const cuadro = document.querySelector(`.cuadro[data-id="${id}"]`);
+          const color = colores[Math.floor(Math.random() * colores.length)];
+          cuadro.style.backgroundColor = color;
+          setTimeout(() => {
+            cuadro.style.backgroundColor = "#888";
+          }, 300);
+          i++;
+          if (i >= secuencia.length) {
+            clearInterval(intervalo);
+            esperandoInput = true;
+            iniciarTemporizador();
+          }
+        }, 400);
+      }
+
+      function iniciarTemporizador() {
+        clearTimeout(tiempoLimite);
+        tiempoLimite = setTimeout(() => {
+          perderPorTiempo();
+        }, tiempoMaximo);
+      }
+
+      function perderPorTiempo() {
+        mensaje.innerText = "⏱️ Tardaste demasiado. Reiniciando...";
+        secuencia = [];
+        nivel = 1;
+        puntos = 0;
+        nivelTexto.innerText = "Nivel: " + nivel;
+        puntosTexto.innerText = "Puntos: " + puntos;
+        esperandoInput = false;
+        setTimeout(() => {
+          mensaje.innerText = "";
+          nuevaSecuencia();
+        }, 1500);
+      }
+
+      cuadros.forEach(cuadro => {
+        cuadro.addEventListener("click", () => {
+          if (!esperandoInput) return;
+          clearTimeout(tiempoLimite);
+          const id = parseInt(cuadro.getAttribute("data-id"));
+          jugador.push(id);
+          cuadro.style.backgroundColor = "#00cc66";
+          setTimeout(() => {
+            cuadro.style.backgroundColor = "#888";
+          }, 300);
+          verificar();
+        });
+      });
+
+      function verificar() {
+        for (let i = 0; i < jugador.length; i++) {
+          if (jugador[i] !== secuencia[i]) {
+            mensaje.innerText = "❌ Fallaste. Reiniciando...";
+            secuencia = [];
+            nivel = 1;
+            puntos = 0;
+            nivelTexto.innerText = "Nivel: " + nivel;
+            puntosTexto.innerText = "Puntos: " + puntos;
+            esperandoInput = false;
+            setTimeout(() => {
+              mensaje.innerText = "";
+              nuevaSecuencia();
+            }, 1500);
+            return;
+          }
+        }
+
+        if (jugador.length === secuencia.length) {
+          mensaje.innerText = "✅ ¡Bien hecho!";
+          nivel++;
+          puntos += 10;
+          nivelTexto.innerText = "Nivel: " + nivel;
+          puntosTexto.innerText = "Puntos: " + puntos;
+          esperandoInput = false;
+          setTimeout(() => {
+            mensaje.innerText = "";
+            nuevaSecuencia();
+          }, 1000);
+        } else {
+          iniciarTemporizador(); // reinicia el temporizador tras cada clic correcto
+        }
+      }
+
+      nuevaSecuencia();
+    };
+  </script>
+</body>
+</html>
