@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
   <meta charset="utf-8" />
-  <title>Flappy Bird - Spawn Fix</title>
+  <title>Flappy Bird - Fix Bird Estancat</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     html,body { margin:0; height:100%; background:#70c5ce; overflow:hidden; }
@@ -12,10 +12,7 @@
 <body>
   <canvas id="game"></canvas>
   <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-
-    // --- Paràmetres fidels ---
+    // ----- Paràmetres fidels (valors empírics) -----
     const PIPE_WIDTH = 52;
     const BASE_GAP = 130;
     const GAP_JITTER = 8;
@@ -27,7 +24,10 @@
     const GRAVITY = 0.25;
     const FLAP_V = -6.5;
 
-    // Estat
+    // ----- Estat reassignable -----
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
     let birdSize, birdY, birdV;
     let groundH;
     let pipes = [];
@@ -35,24 +35,27 @@
     let score = 0;
     let gameOver = false;
 
-    // Controls de spawn robustos
+    // Spawn controls
     let lastSpawnFrame = -9999;
-    let minSpawnFrameDelta = PIPE_INTERVAL_FRAMES - 8; // permet lleugera variació temporal
-    let minSpawnPixelSpacing = Math.floor(window.innerWidth * 0.45); // mínim píxels entre tubs
+    let minSpawnFrameDelta = PIPE_INTERVAL_FRAMES - 8;
+    let minSpawnPixelSpacing = Math.floor(window.innerWidth * 0.45);
 
+    // Resize i inicialització de mides depenents del canvas
     function resize() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       birdSize = Math.max(MIN_BIRD_SIZE, Math.min(MAX_BIRD_SIZE, Math.floor(canvas.width * 0.04)));
       groundH = Math.max(24, Math.floor(canvas.height * 0.06));
       minSpawnPixelSpacing = Math.floor(canvas.width * 0.45);
+      // sempre assegura una posició inicial vàlida per al bird
+      if (typeof birdY === 'undefined' || birdY === null) birdY = canvas.height * 0.45;
     }
     window.addEventListener('resize', resize);
     resize();
 
     function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
 
-    // Spawn inicial amb espai adequat
+    // Spawn inicial robust
     function spawnInitial() {
       pipes = [];
       const margin = Math.floor(canvas.height * 0.08);
@@ -60,7 +63,6 @@
       const top1 = randInt(margin, Math.max(margin, canvas.height - firstGap - margin - groundH));
       const x1 = canvas.width + 140;
       pipes.push({ x: x1, top: top1, gap: firstGap, width: PIPE_WIDTH, scored:false });
-      // dos tubs més amb separació clara
       let lastX = x1;
       for (let i=0;i<2;i++){
         const gap = BASE_GAP + randInt(-GAP_JITTER, GAP_JITTER);
@@ -71,30 +73,24 @@
       lastSpawnFrame = frame;
     }
 
-    // Generació periòdica però amb comprovació de distància en píxels i frames
+    // Safe spawn: comprova frame i distància en píxels
     function spawnPeriodicSafe() {
-      // no spawn si ja s'ha spawnat molt recent (protecció frame)
       if (frame - lastSpawnFrame < minSpawnFrameDelta) return;
-
-      // si no hi ha pipes, spawna directament
       const margin = Math.floor(canvas.height * 0.08);
       const gap = BASE_GAP + randInt(-GAP_JITTER, GAP_JITTER);
       const top = randInt(margin, Math.max(margin, canvas.height - gap - margin - groundH));
       const spawnX = canvas.width + PIPE_WIDTH;
-
       const last = pipes.length ? pipes[pipes.length - 1] : null;
       if (last) {
         const lastRight = last.x + last.width;
         const pixelDistance = spawnX - lastRight;
-        // comprova distància en píxels abans de spawn
         if (pixelDistance < minSpawnPixelSpacing) return;
       }
-      // tot correcte, spawna i registra frame
       pipes.push({ x: spawnX, top, gap, width: PIPE_WIDTH, scored:false });
       lastSpawnFrame = frame;
     }
 
-    // Dibuix i física
+    // Dibuixos i física
     function drawBird() {
       const bx = Math.floor(canvas.width * BIRD_X_RATIO);
       ctx.save();
@@ -180,7 +176,7 @@
       loop();
     }
 
-    // Loop
+    // Bucle principal
     let raf = null;
     function loop() {
       if (gameOver) { draw(); drawGameOver(); cancelAnimationFrame(raf); return; }
@@ -190,23 +186,25 @@
 
     function draw() {
       ctx.clearRect(0,0,canvas.width,canvas.height);
+      // física
       birdV += GRAVITY;
       birdY += birdV;
 
-      // intentem spawn segur
+      // spawn i actualització
       spawnPeriodicSafe();
       updatePipes();
 
+      // dibuix
       for (const p of pipes) drawPipe(p);
       drawGround();
       drawBird();
       drawUI();
-      checkCollisions();
 
+      checkCollisions();
       frame++;
     }
 
-    // init
+    // Inicialitza correctament (resize, spawn i bucle)
     resize();
     spawnInitial();
     loop();
