@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="ca">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Memoria Visual Pro</title>
   <style>
     body {
@@ -12,14 +12,8 @@
       background: linear-gradient(135deg, #ffcccc, #ccffff);
       min-height: 100vh;
     }
-    h1 {
-      margin-top: 30px;
-      color: #333;
-    }
-    #nivel, #puntos {
-      font-size: 22px;
-      margin-top: 10px;
-    }
+    h1 { margin-top: 30px; color: #333; }
+    #nivel, #puntos { font-size: 22px; margin-top: 10px; }
     #cuadros {
       display: grid;
       grid-template-columns: repeat(3, 100px);
@@ -30,20 +24,14 @@
     .cuadro {
       width: 100px;
       height: 100px;
-      background-color: #888;
+      background-color: #888; /* gris per defecte */
       border-radius: 10px;
       cursor: pointer;
-      transition: filter 0.15s, transform 0.12s;
+      transition: filter 0.15s, transform 0.12s, background-color 0.12s;
       display: inline-block;
     }
-    .cuadro:active {
-      transform: scale(0.98);
-    }
-    #mensaje {
-      font-size: 20px;
-      margin-top: 20px;
-      color: #444;
-    }
+    .cuadro:active { transform: scale(0.98); }
+    #mensaje { font-size: 20px; margin-top: 20px; color: #444; }
     .visually-hidden {
       position: absolute;
       left: -10000px;
@@ -64,30 +52,18 @@
 
   <script>
     window.onload = function () {
-      // Colors fixes per cada quadrat (index 0..8)
+      // Color fix per cada quadrat (s'utilitza només quan s'encén)
       const coloresFijos = [
-        "#ff6666", // 0
-        "#66ccff", // 1
-        "#99ff99", // 2
-        "#ffcc66", // 3
-        "#cc99ff", // 4
-        "#ff99cc", // 5
-        "#66ffcc", // 6
-        "#ccccff", // 7
-        "#ff9966"  // 8
+        "#ff6666", "#66ccff", "#99ff99",
+        "#ffcc66", "#cc99ff", "#ff99cc",
+        "#66ffcc", "#ccccff", "#ff9966"
       ];
 
-      // Frequències (Hz) per cada quadrat per al pitido
+      // Frequències (Hz) per cada quadrat
       const frecuencias = [
-        440, // La4
-        523.25, // Do5
-        659.25, // Mi5
-        784, // Sol5
-        987.77, // Si5
-        1318.51, // Mi6
-        349.23, // Fa4
-        293.66, // Re4
-        587.33 // Re5
+        440, 523.25, 659.25,
+        784, 987.77, 1318.51,
+        349.23, 293.66, 587.33
       ];
 
       const cuadrosContainer = document.getElementById("cuadros");
@@ -101,18 +77,14 @@
       let puntos = 0;
       let esperandoInput = false;
       let tiempoLimite;
-      let tiempoMaximo = 3500; // 3.5 segundos
+      let tiempoMaximo = 3500;
 
       // Web Audio setup
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       let audioCtx = null;
-
       function ensureAudioContext() {
-        if (!audioCtx) {
-          audioCtx = new AudioContext();
-        }
+        if (!audioCtx) audioCtx = new AudioContext();
       }
-
       function playTone(freq, duration = 300, type = 'sine') {
         ensureAudioContext();
         const now = audioCtx.currentTime;
@@ -129,14 +101,13 @@
         osc.stop(now + duration / 1000 + 0.02);
       }
 
-      // Crear 9 quadrats amb color fix i atributs ARIA
+      // Crear 9 quadrats grisos per defecte
       for (let i = 0; i < 9; i++) {
         const cuadro = document.createElement("div");
         cuadro.classList.add("cuadro");
         cuadro.setAttribute("data-id", i);
         cuadro.setAttribute("role", "button");
         cuadro.setAttribute("aria-label", "Quadrat " + (i + 1));
-        cuadro.style.backgroundColor = coloresFijos[i];
         cuadrosContainer.appendChild(cuadro);
       }
 
@@ -152,11 +123,13 @@
       function iluminarCuadro(id, dur = 300) {
         const cuadro = document.querySelector(`.cuadro[data-id="${id}"]`);
         if (!cuadro) return;
-        // Efecte d'il·luminació amb filtre
+        // posar color fix quan s'encén, després tornar a gris
+        cuadro.style.backgroundColor = coloresFijos[id];
         cuadro.style.filter = "brightness(1.6) drop-shadow(0 6px 12px rgba(0,0,0,0.25))";
         playTone(frecuencias[id], dur);
         setTimeout(() => {
           cuadro.style.filter = "";
+          cuadro.style.backgroundColor = "#888";
         }, dur);
       }
 
@@ -168,13 +141,12 @@
           i++;
           if (i >= secuencia.length) {
             clearInterval(intervalo);
-            // petita pausa abans d'acceptar input
             setTimeout(() => {
               esperandoInput = true;
               iniciarTemporizador();
             }, 200);
           }
-        }, 500); // temps entre il·luminacions
+        }, 500);
       }
 
       function iniciarTemporizador() {
@@ -200,22 +172,22 @@
 
       cuadros.forEach(cuadro => {
         cuadro.addEventListener("click", () => {
-          // Activar audio context amb primer interacte
           ensureAudioContext();
           if (!esperandoInput) return;
           clearTimeout(tiempoLimite);
           const id = parseInt(cuadro.getAttribute("data-id"));
           jugador.push(id);
-          // efecte visual i so local
+          // mostrar color fix breument i reproduir so
+          cuadro.style.backgroundColor = coloresFijos[id];
           cuadro.style.filter = "brightness(1.6) drop-shadow(0 6px 12px rgba(0,0,0,0.25))";
           playTone(frecuencias[id], 220);
           setTimeout(() => {
             cuadro.style.filter = "";
+            cuadro.style.backgroundColor = "#888";
           }, 220);
           verificar();
         });
 
-        // millora per accessibilitat amb teclat
         cuadro.tabIndex = 0;
         cuadro.addEventListener("keydown", (e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -255,11 +227,10 @@
             nuevaSecuencia();
           }, 1000);
         } else {
-          iniciarTemporizador(); // reinicia el temporitzador tras cada clic correcte
+          iniciarTemporizador();
         }
       }
 
-      // Comença el joc
       nuevaSecuencia();
     };
   </script>
