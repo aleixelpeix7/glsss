@@ -52,14 +52,12 @@
 
   <script>
     window.onload = function () {
-      // Colors vius per cada quadrat (s'utilitzen quan s'encenen)
       const coloresFijos = [
         "#e53935", "#1e88e5", "#43a047",
         "#ffb300", "#8e24aa", "#d81b60",
         "#00acc1", "#3949ab", "#fb8c00"
       ];
 
-      // Frequències (Hz) per cada quadrat
       const frecuencias = [
         440, 523.25, 659.25,
         784, 987.77, 1318.51,
@@ -77,12 +75,14 @@
       let tiempoLimite;
       let tiempoMaximo = 3500;
 
-      // Llindar per nivell: nivell 1 = 5, nivell 2 = 10, nivell 3 = 15, ...
+      // Llindars: nivell 1 -> fins 5; nivell 2 -> fins 10; després s'atura en 2
       function llindarDeNivell(n) {
-        return n * 5;
+        if (n === 1) return 5;
+        if (n === 2) return 10;
+        return 10;
       }
+      const NIVELL_MAXIM = 2;
 
-      // Web Audio setup
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       let audioCtx = null;
       function ensureAudioContext() {
@@ -104,7 +104,6 @@
         osc.stop(now + duration / 1000 + 0.02);
       }
 
-      // Crear 9 quadrats grisos per defecte
       for (let i = 0; i < 9; i++) {
         const cuadro = document.createElement("div");
         cuadro.classList.add("cuadro");
@@ -177,7 +176,6 @@
           clearTimeout(tiempoLimite);
           const id = parseInt(cuadro.getAttribute("data-id"));
           jugador.push(id);
-          // mostrar color viu breument i reproduir so
           cuadro.style.backgroundColor = coloresFijos[id];
           cuadro.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 14px " + hexToRgba(coloresFijos[id], 0.32);
           playTone(frecuencias[id], 220);
@@ -213,18 +211,36 @@
           }
         }
 
-        // Si completa l'intent actual, afegim un nou pas a la seqüència
         if (jugador.length === secuencia.length) {
-          // comprovar si hem arribat al llindar del nivell actual
+          // Si hem arribat al llindar del nivell actual, pujar nivell i REINICIAR la seqüència
           if (secuencia.length >= llindarDeNivell(nivell)) {
-            nivell++;
-            nivellTexto.innerText = "Nivell: " + nivell;
-            mensaje.innerText = "🔓 Nivell " + (nivell - 1) + " completat! Nou nivell " + nivell + ".";
-            // breu pausa perquè l'usuari vegi el missatge
-            setTimeout(() => { mensaje.innerText = ""; nuevaSecuencia(); }, 1200);
-            return;
+            if (nivell < NIVELL_MAXIM) {
+              const nivellAnterior = nivell;
+              nivell++;
+              nivellTexto.innerText = "Nivell: " + nivell;
+              mensaje.innerText = "🔓 Nivell " + nivellAnterior + " completat! Comença Nivell " + nivell + " amb seqüència nova.";
+              // Reiniciar seqüència des de zero per al nou nivell
+              secuencia = [];
+              setTimeout(() => {
+                mensaje.innerText = "";
+                // començar amb un pas inicial per la nova fase
+                secuencia.push(Math.floor(Math.random() * 9));
+                mostrarSecuencia();
+              }, 1200);
+              return;
+            } else {
+              // Si ja som al nivell màxim (2) mantenim seqüència fins a 10 però no incrementem més
+              mensaje.innerText = "✅ Has completat el nivell màxim. Continua jugant fins a 10 tecles.";
+              esperandoInput = false;
+              setTimeout(() => {
+                mensaje.innerText = "";
+                nuevaSecuencia();
+              }, 1000);
+              return;
+            }
           }
-          // si no s'arriba al llindar, simplement continuar i afegir a seqüència
+
+          // Si no s'arriba al llindar, afegir un nou pas i continuar
           mensaje.innerText = "✅ Bé!";
           esperandoInput = false;
           setTimeout(() => {
@@ -236,7 +252,6 @@
         }
       }
 
-      // utilitat per crear un rgba basat en el hex
       function hexToRgba(hex, alpha) {
         const h = hex.replace('#','');
         const r = parseInt(h.substring(0,2),16);
@@ -250,4 +265,3 @@
   </script>
 </body>
 </html>
-```
