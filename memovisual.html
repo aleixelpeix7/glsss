@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
   <meta charset="UTF-8" />
-  <title>Memoria Visual Pro - Nivells (corregit)</title>
+  <title>Memoria Visual Pro - Nivells Infinit</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -72,16 +72,14 @@
       let jugador = [];
       let nivell = 1;
       let esperandoInput = false;
-      let jugantSequencia = false; // nou flag: true mentre es reprodueix la seqüència
+      let jugantSequencia = false;
       let tiempoLimite;
       let tiempoMaximo = 3500;
 
+      // Ara cada nivell requereix (nivell * 2) tecles; nivells infinits
       function llindarDeNivell(n) {
-        if (n === 1) return 5;
-        if (n === 2) return 10;
-        return 10;
+        return n * 2;
       }
-      const NIVELL_MAXIM = 2;
 
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       let audioCtx = null;
@@ -115,17 +113,15 @@
 
       const cuadros = document.querySelectorAll(".cuadro");
 
-      // novaSecuencia: afegeix un pas i reprodueix, assegurant-se que no es poden fer clics durant la reproducció
+      // Afegir un nou pas i reproduir la seqüència de manera segura
       function nuevaSecuencia() {
         jugador = [];
         esperandoInput = false;
         jugantSequencia = true;
-        // afegim un pas aleatori
         secuencia.push(Math.floor(Math.random() * 9));
         mostrarSecuencia();
       }
 
-      // reproducció segura de la seqüència: deixa jugantSequencia = true fins que acabi
       function mostrarSecuencia() {
         let i = 0;
         const intervalo = setInterval(() => {
@@ -134,9 +130,8 @@
           i++;
           if (i >= secuencia.length) {
             clearInterval(intervalo);
-            // breu pausa, després habilitem entrada i reiniciem temporitzador
             setTimeout(() => {
-              jugador = []; // garantir que jugador està net abans d'activar l'entrada
+              jugador = [];
               jugantSequencia = false;
               esperandoInput = true;
               iniciarTemporizador();
@@ -183,12 +178,10 @@
       cuadros.forEach(cuadro => {
         cuadro.addEventListener("click", () => {
           ensureAudioContext();
-          // ignorar clics mentre es reprodueix la seqüència o quan no estigui permès
           if (jugantSequencia || !esperandoInput) return;
           clearTimeout(tiempoLimite);
           const id = parseInt(cuadro.getAttribute("data-id"));
           jugador.push(id);
-          // efecte visual i so local
           cuadro.style.backgroundColor = coloresFijos[id];
           cuadro.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 14px " + hexToRgba(coloresFijos[id], 0.32);
           playTone(frecuencias[id], 220);
@@ -230,31 +223,21 @@
         if (jugador.length === secuencia.length) {
           // Si hem arribat al llindar del nivell actual, pujar nivell i REINICIAR la seqüència
           if (secuencia.length >= llindarDeNivell(nivell)) {
-            if (nivell < NIVELL_MAXIM) {
-              const nivellAnterior = nivell;
-              nivell++;
-              nivellTexto.innerText = "Nivell: " + nivell;
-              mensaje.innerText = "🔓 Nivell " + nivellAnterior + " completat! Comença Nivell " + nivell + " amb seqüència nova.";
-              // Reiniciar seqüència des de zero per al nou nivell
-              secuencia = [];
-              jugador = [];
-              esperandoInput = false;
-              jugantSequencia = true;
-              setTimeout(() => {
-                mensaje.innerText = "";
-                secuencia.push(Math.floor(Math.random() * 9));
-                mostrarSecuencia();
-              }, 900);
-              return;
-            } else {
-              mensaje.innerText = "✅ Has completat el nivell màxim. Continua jugant fins a 10 tecles.";
-              esperandoInput = false;
-              setTimeout(() => {
-                mensaje.innerText = "";
-                nuevaSecuencia();
-              }, 1000);
-              return;
-            }
+            const nivellAnterior = nivell;
+            nivell++;
+            nivellTexto.innerText = "Nivell: " + nivell;
+            mensaje.innerText = "🔓 Nivell " + nivellAnterior + " completat! Comença Nivell " + nivell + " amb seqüència nova.";
+            // Reiniciar seqüència des de zero per al nou nivell
+            secuencia = [];
+            jugador = [];
+            esperandoInput = false;
+            jugantSequencia = true;
+            setTimeout(() => {
+              mensaje.innerText = "";
+              secuencia.push(Math.floor(Math.random() * 9));
+              mostrarSecuencia();
+            }, 900);
+            return;
           }
 
           // Si no s'arriba al llindar, afegir un nou pas i continuar
@@ -263,7 +246,6 @@
           jugantSequencia = true;
           setTimeout(() => {
             mensaje.innerText = "";
-            // afegir un pas i reproduir
             secuencia.push(Math.floor(Math.random() * 9));
             mostrarSecuencia();
           }, 700);
