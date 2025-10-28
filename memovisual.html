@@ -141,7 +141,7 @@
     <div class="visually-hidden" id="instruccio">Repeteix la seqüència de colors amb clics o toc.</div>
     <footer>Tria la mida i prem Començar</footer>
 
-    <!-- OVERLAY D'INICI: mostra abans de començar -->
+    <!-- OVERLAY d'inici -->
     <div class="overlay" id="startOverlay" role="dialog" aria-modal="true" aria-label="Pantalla d'inici">
       <div class="start-panel">
         <h2>Començar partida</h2>
@@ -178,7 +178,7 @@
       let cols = 3;
       let coloresFijos = [];
       let frecuencias = [];
-      let baseStep = 3; // per defecte 3x3 -> 3
+      let baseStep = 3; // 2×2 -> 2, 3×3 -> 3, 4×4 -> 4, s'assigna en setupBoard
 
       let secuencia = [];
       let jugador = [];
@@ -188,7 +188,7 @@
       let tiempoLimite;
       const tiempoMaximo = 3500;
 
-      // Map per timeouts per quadrat (evita quedar marcat)
+      // Map per timeouts per quadrat
       const cuadroTimeouts = new Map();
 
       // Audio
@@ -211,7 +211,7 @@
         osc.stop(now + duration / 1000 + 0.02);
       }
 
-      // Helpers colors / frecs
+      // Helpers
       function hexToRgba(hex, alpha) {
         const h = hex.replace('#','');
         const r = parseInt(h.substring(0,2),16);
@@ -220,7 +220,7 @@
         return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
       }
 
-      // llindar segons baseStep: nivell * baseStep
+      // llindar segons mida: nivell * baseStep
       function llindarDeNivell(n) { return n * baseStep; }
 
       function generarColors(n) {
@@ -256,7 +256,7 @@
         else if (n === 9) cols = 3;
         else cols = 4;
 
-        // baseStep segons mida: 2x2 -> 2, 3x3 -> 3, 4x4 -> 4
+        // assignar baseStep: determina el llindar del primer nivell i l'increment per nivell
         if (n === 4) baseStep = 2;
         else if (n === 9) baseStep = 3;
         else baseStep = 4;
@@ -338,13 +338,12 @@
         esperandoInput = false;
         jugantSequencia = true;
         overlay.style.display = 'none';
-        // primer pas: crear seqüència inicial amb baseStep elements
-        for (let i = 0; i < baseStep; i++) secuencia.push(Math.floor(Math.random() * size));
+        // seqüència inicial: començar amb 1 pas (com abans)
+        secuencia.push(Math.floor(Math.random() * size));
         mostrarSecuencia();
       }
 
       function nuevaSecuenciaUnaPas() {
-        // afegir un sol pas (com abans)
         jugador = [];
         esperandoInput = false;
         jugantSequencia = true;
@@ -396,8 +395,8 @@
         jugantSequencia = false;
         setTimeout(() => {
           mensaje.innerText = '';
-          // seqüència inicial baseStep
-          for (let i = 0; i < baseStep; i++) secuencia.push(Math.floor(Math.random() * size));
+          // començar de nou amb 1 pas
+          secuencia.push(Math.floor(Math.random() * size));
           mostrarSecuencia();
         }, 1500);
       }
@@ -414,7 +413,8 @@
             jugantSequencia = false;
             setTimeout(() => {
               mensaje.innerText = '';
-              for (let k = 0; k < baseStep; k++) secuencia.push(Math.floor(Math.random() * size));
+              // nova seqüència començant amb 1 pas
+              secuencia.push(Math.floor(Math.random() * size));
               mostrarSecuencia();
             }, 1500);
             return;
@@ -422,31 +422,31 @@
         }
 
         if (jugador.length === secuencia.length) {
-          // si hem arribat al llindar del nivell actual: incrementar nivell i reiniciar seqüència amb baseStep elements
+          // comprovem si hem arribat al llindar del nivell actual
           if (secuencia.length >= llindarDeNivell(nivell)) {
             const nivellAnterior = nivell;
             nivell++;
             nivellTexto.innerText = 'Nivell: ' + nivell;
-            mensaje.innerText = "🔓 Nivell " + nivellAnterior + " completat! Comença Nivell " + nivell + " amb seqüència nova.";
+            mensaje.innerText = "🔓 Nivell " + nivellAnterior + " completat! Comença Nivell " + nivell + ".";
+            // Reiniciar seqüència per al nou nivell però COMENÇAR amb 1 pas (com vas demanar)
             secuencia = [];
             jugador = [];
             esperandoInput = false;
             jugantSequencia = true;
             setTimeout(() => {
               mensaje.innerText = '';
-              for (let k = 0; k < baseStep; k++) secuencia.push(Math.floor(Math.random() * size));
+              secuencia.push(Math.floor(Math.random() * size));
               mostrarSecuencia();
             }, 900);
             return;
           }
 
-          // si no arriba al llindar, afegir un nou pas i continuar
+          // si no s'arriba al llindar, afegir un pas i continuar (com abans)
           mensaje.innerText = "✅ Bé!";
           esperandoInput = false;
           jugantSequencia = true;
           setTimeout(() => {
             mensaje.innerText = '';
-            // afegir un sol pas
             secuencia.push(Math.floor(Math.random() * size));
             mostrarSecuencia();
           }, 700);
@@ -473,7 +473,6 @@
       });
 
       btnRestart.addEventListener('click', () => {
-        // reiniciar la mateixa mida sense mostrar l'overlay
         iniciarJoc();
       });
 
@@ -481,6 +480,35 @@
         setupBoard(n);
         overlay.style.display = 'none';
         iniciarJoc();
+      }
+
+      // Setup board sense iniciar
+      function setupBoard(n) {
+        size = n;
+        if (n === 4) cols = 2;
+        else if (n === 9) cols = 3;
+        else cols = 4;
+
+        // assignar baseStep
+        if (n === 4) baseStep = 2;
+        else if (n === 9) baseStep = 3;
+        else baseStep = 4;
+
+        coloresFijos = generarColors(size);
+        frecuencias = generarFrecuencias(size);
+        cuadrosContainer.innerHTML = '';
+        cuadrosContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        for (let i = 0; i < size; i++) {
+          const cuadro = document.createElement('div');
+          cuadro.classList.add('cuadro');
+          cuadro.setAttribute('data-id', i);
+          cuadro.setAttribute('role', 'button');
+          cuadro.setAttribute('aria-label', 'Quadrat ' + (i + 1));
+          cuadro.tabIndex = 0;
+          cuadrosContainer.appendChild(cuadro);
+        }
+        attachListeners();
+        btnRestart.style.display = 'inline-block';
       }
 
       // Inicialització per defecte: prepara la vista i mostra overlay
