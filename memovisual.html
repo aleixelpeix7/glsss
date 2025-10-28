@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
   <meta charset="UTF-8" />
-  <title>Memoria Visual Pro - Colors Vius</title>
+  <title>Memoria Visual Pro - Nivells</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,7 +13,7 @@
       min-height: 100vh;
     }
     h1 { margin-top: 30px; color: #222; }
-    #nivel, #puntos { font-size: 22px; margin-top: 10px; color: #222; }
+    #nivell { font-size: 22px; margin-top: 10px; color: #222; }
     #cuadros {
       display: grid;
       grid-template-columns: repeat(3, 100px);
@@ -24,7 +24,7 @@
     .cuadro {
       width: 100px;
       height: 100px;
-      background-color: #888; /* gris per defecte */
+      background-color: #888;
       border-radius: 12px;
       cursor: pointer;
       transition: transform 0.12s, box-shadow 0.12s, background-color 0.12s;
@@ -32,7 +32,7 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.12);
     }
     .cuadro:active { transform: scale(0.98); }
-    #mensaje { font-size: 20px; margin-top: 20px; color: #333; }
+    #mensaje { font-size: 20px; margin-top: 20px; color: #333; min-height: 26px; }
     .visually-hidden {
       position: absolute;
       left: -10000px;
@@ -45,25 +45,18 @@
 </head>
 <body>
   <h1>🧠 Memoria Visual Pro</h1>
-  <div id="nivel">Nivel: 1</div>
-  <div id="puntos">Punts: 0</div>
+  <div id="nivell">Nivell: 1</div>
   <div id="cuadros" role="grid" aria-label="Tauler de memòria"></div>
   <div id="mensaje" role="status" aria-live="polite"></div>
   <div class="visually-hidden" id="instruccio">Repeteix la seqüència de colors amb clics o toc.</div>
 
   <script>
     window.onload = function () {
-      // Colors vius (més saturats i brillants) per cada quadrat (s'utilitzen quan s'encenen)
+      // Colors vius per cada quadrat (s'utilitzen quan s'encenen)
       const coloresFijos = [
-        "#e53935", // vermell intens
-        "#1e88e5", // blau brillant
-        "#43a047", // verd intens
-        "#ffb300", // taronja
-        "#8e24aa", // morat fosc
-        "#d81b60", // rosa fosc
-        "#00acc1", // turquesa
-        "#3949ab", // blau profund
-        "#fb8c00"  // taronja intens
+        "#e53935", "#1e88e5", "#43a047",
+        "#ffb300", "#8e24aa", "#d81b60",
+        "#00acc1", "#3949ab", "#fb8c00"
       ];
 
       // Frequències (Hz) per cada quadrat
@@ -75,16 +68,19 @@
 
       const cuadrosContainer = document.getElementById("cuadros");
       const mensaje = document.getElementById("mensaje");
-      const nivelTexto = document.getElementById("nivel");
-      const puntosTexto = document.getElementById("puntos");
+      const nivellTexto = document.getElementById("nivell");
 
       let secuencia = [];
       let jugador = [];
-      let nivel = 1;
-      let puntos = 0;
+      let nivell = 1;
       let esperandoInput = false;
       let tiempoLimite;
       let tiempoMaximo = 3500;
+
+      // Llindar per nivell: nivell 1 = 5, nivell 2 = 10, nivell 3 = 15, ...
+      function llindarDeNivell(n) {
+        return n * 5;
+      }
 
       // Web Audio setup
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -130,7 +126,6 @@
       function iluminarCuadro(id, dur = 300) {
         const cuadro = document.querySelector(`.cuadro[data-id="${id}"]`);
         if (!cuadro) return;
-        // posar color viu quan s'encén, afegir llum i sombra més forta
         cuadro.style.backgroundColor = coloresFijos[id];
         cuadro.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 18px " + hexToRgba(coloresFijos[id], 0.35);
         playTone(frecuencias[id], dur);
@@ -166,10 +161,8 @@
       function perderPorTiempo() {
         mensaje.innerText = "⏱️ Has trigat massa. Reiniciant...";
         secuencia = [];
-        nivel = 1;
-        puntos = 0;
-        nivelTexto.innerText = "Nivel: " + nivel;
-        puntosTexto.innerText = "Punts: " + puntos;
+        nivell = 1;
+        nivellTexto.innerText = "Nivell: " + nivell;
         esperandoInput = false;
         setTimeout(() => {
           mensaje.innerText = "";
@@ -209,10 +202,8 @@
           if (jugador[i] !== secuencia[i]) {
             mensaje.innerText = "❌ Has fallat. Reiniciant...";
             secuencia = [];
-            nivel = 1;
-            puntos = 0;
-            nivelTexto.innerText = "Nivel: " + nivel;
-            puntosTexto.innerText = "Punts: " + puntos;
+            nivell = 1;
+            nivellTexto.innerText = "Nivell: " + nivell;
             esperandoInput = false;
             setTimeout(() => {
               mensaje.innerText = "";
@@ -222,17 +213,24 @@
           }
         }
 
+        // Si completa l'intent actual, afegim un nou pas a la seqüència
         if (jugador.length === secuencia.length) {
-          mensaje.innerText = "✅ Enhorabona!";
-          nivel++;
-          puntos += 10;
-          nivelTexto.innerText = "Nivel: " + nivel;
-          puntosTexto.innerText = "Punts: " + puntos;
+          // comprovar si hem arribat al llindar del nivell actual
+          if (secuencia.length >= llindarDeNivell(nivell)) {
+            nivell++;
+            nivellTexto.innerText = "Nivell: " + nivell;
+            mensaje.innerText = "🔓 Nivell " + (nivell - 1) + " completat! Nou nivell " + nivell + ".";
+            // breu pausa perquè l'usuari vegi el missatge
+            setTimeout(() => { mensaje.innerText = ""; nuevaSecuencia(); }, 1200);
+            return;
+          }
+          // si no s'arriba al llindar, simplement continuar i afegir a seqüència
+          mensaje.innerText = "✅ Bé!";
           esperandoInput = false;
           setTimeout(() => {
             mensaje.innerText = "";
             nuevaSecuencia();
-          }, 1000);
+          }, 700);
         } else {
           iniciarTemporizador();
         }
@@ -252,3 +250,4 @@
   </script>
 </body>
 </html>
+```
