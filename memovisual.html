@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
   <meta charset="UTF-8" />
-  <title>Memoria Visual Pro - Nivells</title>
+  <title>Memoria Visual Pro - Nivells (corregit)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -72,10 +72,10 @@
       let jugador = [];
       let nivell = 1;
       let esperandoInput = false;
+      let jugantSequencia = false; // nou flag: true mentre es reprodueix la seqüència
       let tiempoLimite;
       let tiempoMaximo = 3500;
 
-      // Llindars: nivell 1 -> fins 5; nivell 2 -> fins 10; després s'atura en 2
       function llindarDeNivell(n) {
         if (n === 1) return 5;
         if (n === 2) return 10;
@@ -115,11 +115,34 @@
 
       const cuadros = document.querySelectorAll(".cuadro");
 
+      // novaSecuencia: afegeix un pas i reprodueix, assegurant-se que no es poden fer clics durant la reproducció
       function nuevaSecuencia() {
         jugador = [];
         esperandoInput = false;
+        jugantSequencia = true;
+        // afegim un pas aleatori
         secuencia.push(Math.floor(Math.random() * 9));
         mostrarSecuencia();
+      }
+
+      // reproducció segura de la seqüència: deixa jugantSequencia = true fins que acabi
+      function mostrarSecuencia() {
+        let i = 0;
+        const intervalo = setInterval(() => {
+          const id = secuencia[i];
+          iluminarCuadro(id, 300);
+          i++;
+          if (i >= secuencia.length) {
+            clearInterval(intervalo);
+            // breu pausa, després habilitem entrada i reiniciem temporitzador
+            setTimeout(() => {
+              jugador = []; // garantir que jugador està net abans d'activar l'entrada
+              jugantSequencia = false;
+              esperandoInput = true;
+              iniciarTemporizador();
+            }, 220);
+          }
+        }, 500);
       }
 
       function iluminarCuadro(id, dur = 300) {
@@ -134,22 +157,6 @@
         }, dur);
       }
 
-      function mostrarSecuencia() {
-        let i = 0;
-        const intervalo = setInterval(() => {
-          const id = secuencia[i];
-          iluminarCuadro(id, 300);
-          i++;
-          if (i >= secuencia.length) {
-            clearInterval(intervalo);
-            setTimeout(() => {
-              esperandoInput = true;
-              iniciarTemporizador();
-            }, 200);
-          }
-        }, 500);
-      }
-
       function iniciarTemporizador() {
         clearTimeout(tiempoLimite);
         tiempoLimite = setTimeout(() => {
@@ -160,22 +167,28 @@
       function perderPorTiempo() {
         mensaje.innerText = "⏱️ Has trigat massa. Reiniciant...";
         secuencia = [];
+        jugador = [];
         nivell = 1;
         nivellTexto.innerText = "Nivell: " + nivell;
         esperandoInput = false;
+        jugantSequencia = false;
         setTimeout(() => {
           mensaje.innerText = "";
-          nuevaSecuencia();
+          // començar de nou amb un pas
+          secuencia.push(Math.floor(Math.random() * 9));
+          mostrarSecuencia();
         }, 1500);
       }
 
       cuadros.forEach(cuadro => {
         cuadro.addEventListener("click", () => {
           ensureAudioContext();
-          if (!esperandoInput) return;
+          // ignorar clics mentre es reprodueix la seqüència o quan no estigui permès
+          if (jugantSequencia || !esperandoInput) return;
           clearTimeout(tiempoLimite);
           const id = parseInt(cuadro.getAttribute("data-id"));
           jugador.push(id);
+          // efecte visual i so local
           cuadro.style.backgroundColor = coloresFijos[id];
           cuadro.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 14px " + hexToRgba(coloresFijos[id], 0.32);
           playTone(frecuencias[id], 220);
@@ -200,12 +213,15 @@
           if (jugador[i] !== secuencia[i]) {
             mensaje.innerText = "❌ Has fallat. Reiniciant...";
             secuencia = [];
+            jugador = [];
             nivell = 1;
             nivellTexto.innerText = "Nivell: " + nivell;
             esperandoInput = false;
+            jugantSequencia = false;
             setTimeout(() => {
               mensaje.innerText = "";
-              nuevaSecuencia();
+              secuencia.push(Math.floor(Math.random() * 9));
+              mostrarSecuencia();
             }, 1500);
             return;
           }
@@ -221,15 +237,16 @@
               mensaje.innerText = "🔓 Nivell " + nivellAnterior + " completat! Comença Nivell " + nivell + " amb seqüència nova.";
               // Reiniciar seqüència des de zero per al nou nivell
               secuencia = [];
+              jugador = [];
+              esperandoInput = false;
+              jugantSequencia = true;
               setTimeout(() => {
                 mensaje.innerText = "";
-                // començar amb un pas inicial per la nova fase
                 secuencia.push(Math.floor(Math.random() * 9));
                 mostrarSecuencia();
-              }, 1200);
+              }, 900);
               return;
             } else {
-              // Si ja som al nivell màxim (2) mantenim seqüència fins a 10 però no incrementem més
               mensaje.innerText = "✅ Has completat el nivell màxim. Continua jugant fins a 10 tecles.";
               esperandoInput = false;
               setTimeout(() => {
@@ -243,9 +260,12 @@
           // Si no s'arriba al llindar, afegir un nou pas i continuar
           mensaje.innerText = "✅ Bé!";
           esperandoInput = false;
+          jugantSequencia = true;
           setTimeout(() => {
             mensaje.innerText = "";
-            nuevaSecuencia();
+            // afegir un pas i reproduir
+            secuencia.push(Math.floor(Math.random() * 9));
+            mostrarSecuencia();
           }, 700);
         } else {
           iniciarTemporizador();
@@ -260,7 +280,9 @@
         return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
       }
 
-      nuevaSecuencia();
+      // començar: seqüència inicial d'un pas
+      secuencia.push(Math.floor(Math.random() * 9));
+      mostrarSecuencia();
     };
   </script>
 </body>
