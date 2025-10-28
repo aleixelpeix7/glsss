@@ -2,37 +2,83 @@
 <html lang="ca">
 <head>
   <meta charset="UTF-8" />
-  <title>Memoria Visual Pro - Nivells Infinit</title>
+  <title>Memoria Visual Pro - Tria Graella</title>
   <style>
+    :root {
+      --bg1: #ffdede;
+      --bg2: #dff7ff;
+      --panel: rgba(255,255,255,0.8);
+      --gris: #888;
+    }
+    html,body { height:100%; margin:0; }
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(135deg, #ffdede, #dff7ff);
-      min-height: 100vh;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+      padding:20px;
     }
-    h1 { margin-top: 30px; color: #222; }
-    #nivell { font-size: 22px; margin-top: 10px; color: #222; }
+    .container {
+      width: 760px;
+      max-width: 100%;
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    }
+    h1 { margin: 6px 0 12px; color: #222; }
+    .menu {
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+    .btn {
+      background:#fff;
+      border:2px solid #eee;
+      padding:10px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:600;
+      box-shadow:0 6px 12px rgba(0,0,0,0.06);
+      transition: transform .08s, box-shadow .12s;
+    }
+    .btn:active { transform:translateY(1px) scale(.995); }
+    #status { margin-top:8px; color:#333; min-height:22px; }
+    #info {
+      display:flex;
+      gap:20px;
+      align-items:center;
+      justify-content:space-between;
+      margin: 10px 0 18px;
+      flex-wrap:wrap;
+    }
+    #nivell { font-size:18px; color:#222; }
+    #mensaje { font-size:16px; color:#333; min-height:22px; }
+    #boardWrap { display:flex; justify-content:center; }
     #cuadros {
-      display: grid;
-      grid-template-columns: repeat(3, 100px);
-      grid-gap: 15px;
-      justify-content: center;
-      margin-top: 30px;
+      display:grid;
+      grid-gap:12px;
+      justify-content:center;
+      align-content:center;
+      margin-top:6px;
     }
     .cuadro {
-      width: 100px;
-      height: 100px;
-      background-color: #888;
+      width: 90px;
+      height: 90px;
+      background-color: var(--gris);
       border-radius: 12px;
       cursor: pointer;
       transition: transform 0.12s, box-shadow 0.12s, background-color 0.12s;
-      display: inline-block;
       box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+      user-select:none;
+      -webkit-user-select:none;
     }
     .cuadro:active { transform: scale(0.98); }
-    #mensaje { font-size: 20px; margin-top: 20px; color: #333; min-height: 26px; }
     .visually-hidden {
       position: absolute;
       left: -10000px;
@@ -41,51 +87,65 @@
       height: 1px;
       overflow: hidden;
     }
+    footer { margin-top:14px; color:#666; font-size:13px; }
+    @media (max-width:520px) {
+      .cuadro { width: 64px; height:64px; border-radius:10px; }
+    }
   </style>
 </head>
 <body>
-  <h1>🧠 Memoria Visual Pro</h1>
-  <div id="nivell">Nivell: 1</div>
-  <div id="cuadros" role="grid" aria-label="Tauler de memòria"></div>
-  <div id="mensaje" role="status" aria-live="polite"></div>
-  <div class="visually-hidden" id="instruccio">Repeteix la seqüència de colors amb clics o toc.</div>
+  <div class="container" role="application" aria-label="Memoria Visual Pro">
+    <h1>🧠 Memoria Visual Pro</h1>
+
+    <div class="menu" role="menu" aria-label="Tria la graella">
+      <button class="btn" data-size="4">Graella 2×2 (4)</button>
+      <button class="btn" data-size="9">Graella 3×3 (9)</button>
+      <button class="btn" data-size="16">Graella 4×4 (16)</button>
+      <button class="btn" id="btnRestart" style="display:none">Reinicia (mateixa graella)</button>
+    </div>
+
+    <div id="info">
+      <div id="nivell">Nivell: 1</div>
+      <div id="status">
+        <span id="mensaje" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="boardWrap">
+      <div id="cuadros" role="grid" aria-label="Tauler de memòria"></div>
+    </div>
+
+    <div class="visually-hidden" id="instruccio">Repeteix la seqüència de colors amb clics o toc.</div>
+    <footer>Tria la graella per començar</footer>
+  </div>
 
   <script>
     window.onload = function () {
-      const coloresFijos = [
-        "#e53935", "#1e88e5", "#43a047",
-        "#ffb300", "#8e24aa", "#d81b60",
-        "#00acc1", "#3949ab", "#fb8c00"
-      ];
+      // -------- Configuració inicial i helpers --------
+      const menuButtons = document.querySelectorAll('.menu .btn[data-size]');
+      const btnRestart = document.getElementById('btnRestart');
+      const cuadrosContainer = document.getElementById('cuadros');
+      const mensaje = document.getElementById('mensaje');
+      const nivellTexto = document.getElementById('nivell');
 
-      const frecuencias = [
-        440, 523.25, 659.25,
-        784, 987.77, 1318.51,
-        349.23, 293.66, 587.33
-      ];
+      let size = 9; // nombre actual de quadrats
+      let cols = 3; // columnes del grid
+      let coloresFijos = [];
+      let frecuencias = [];
 
-      const cuadrosContainer = document.getElementById("cuadros");
-      const mensaje = document.getElementById("mensaje");
-      const nivellTexto = document.getElementById("nivell");
-
+      // Estat del joc
       let secuencia = [];
       let jugador = [];
       let nivell = 1;
       let esperandoInput = false;
       let jugantSequencia = false;
       let tiempoLimite;
-      let tiempoMaximo = 3500;
+      const tiempoMaximo = 3500;
 
-      // Ara cada nivell requereix (nivell * 2) tecles; nivells infinits
-      function llindarDeNivell(n) {
-        return n * 2;
-      }
-
+      // Audio
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       let audioCtx = null;
-      function ensureAudioContext() {
-        if (!audioCtx) audioCtx = new AudioContext();
-      }
+      function ensureAudioContext() { if (!audioCtx) audioCtx = new AudioContext(); }
       function playTone(freq, duration = 300, type = 'sine') {
         ensureAudioContext();
         const now = audioCtx.currentTime;
@@ -102,28 +162,119 @@
         osc.stop(now + duration / 1000 + 0.02);
       }
 
-      for (let i = 0; i < 9; i++) {
-        const cuadro = document.createElement("div");
-        cuadro.classList.add("cuadro");
-        cuadro.setAttribute("data-id", i);
-        cuadro.setAttribute("role", "button");
-        cuadro.setAttribute("aria-label", "Quadrat " + (i + 1));
-        cuadrosContainer.appendChild(cuadro);
+      function hexToRgba(hex, alpha) {
+        const h = hex.replace('#','');
+        const r = parseInt(h.substring(0,2),16);
+        const g = parseInt(h.substring(2,4),16);
+        const b = parseInt(h.substring(4,6),16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
       }
 
-      const cuadros = document.querySelectorAll(".cuadro");
+      // Llindar de nivell: nivell * 2 (infinit)
+      function llindarDeNivell(n) { return n * 2; }
 
-      // Afegir un nou pas i reproduir la seqüència de manera segura
+      // Genera paleta de colors vius segons mida (retorna array length = size)
+      function generarColors(size) {
+        // base palette spreads hues to avoid pastels
+        const baseHue = [0, 200, 120, 38, 270, 330, 180, 230, 28, 15, 260, 300, 45, 80, 160, 210];
+        const colors = [];
+        for (let i = 0; i < size; i++) {
+          const hue = baseHue[i % baseHue.length];
+          // saturació i llum variable per tonalitats vives
+          colors.push(hslToHex((hue + (i*13)) % 360, 75, 50));
+        }
+        return colors;
+      }
+
+      // converteix HSL a HEX
+      function hslToHex(h, s, l) {
+        s /= 100; l /= 100;
+        const k = n => (n + h / 30) % 12;
+        const a = s * Math.min(l, 1 - l);
+        const f = n => {
+          const color = l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+          return Math.round(255 * color).toString(16).padStart(2, '0');
+        };
+        return `#${f(0)}${f(8)}${f(4)}`;
+      }
+
+      // Genera freqüències per cada posició (escala pentatònica + variacions)
+      function generarFrecuencias(size) {
+        const base = [440, 494, 523.25, 587.33, 659.25, 740, 830, 880, 987.77, 1108.73, 1244.51, 1318.51, 1479.98, 1568, 1760, 1975.53];
+        const frecs = [];
+        for (let i = 0; i < size; i++) frecs.push(base[i % base.length]);
+        return frecs;
+      }
+
+      // -------- Construcció del tauler segons mida --------
+      function setupBoard(n) {
+        size = n;
+        // decidir columnes segons mida
+        if (n === 4) cols = 2;
+        else if (n === 9) cols = 3;
+        else cols = 4;
+        // generar colors i frecs
+        coloresFijos = generarColors(size);
+        frecuencias = generarFrecuencias(size);
+        // neteja UI
+        cuadrosContainer.innerHTML = '';
+        cuadrosContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        // crear quadrats
+        for (let i = 0; i < size; i++) {
+          const cuadro = document.createElement('div');
+          cuadro.classList.add('cuadro');
+          cuadro.setAttribute('data-id', i);
+          cuadro.setAttribute('role', 'button');
+          cuadro.setAttribute('aria-label', 'Quadrat ' + (i + 1));
+          cuadro.tabIndex = 0;
+          cuadrosContainer.appendChild(cuadro);
+        }
+        // mostrar restart button
+        btnRestart.style.display = 'inline-block';
+        attachListeners();
+      }
+
+      function attachListeners() {
+        const cuadros = document.querySelectorAll('.cuadro');
+        cuadros.forEach(cuadro => {
+          cuadro.addEventListener('click', onCuadroClick);
+          cuadro.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              cuadro.click();
+            }
+          });
+        });
+      }
+
+      // -------- Lògica del joc --------
+      function iniciarJoc() {
+        // reset estat
+        secuencia = [];
+        jugador = [];
+        nivell = 1;
+        nivellTexto.innerText = 'Nivell: ' + nivell;
+        mensaje.innerText = '';
+        esperandoInput = false;
+        jugantSequencia = true;
+        // començar amb un pas inicial
+        secuencia.push(Math.floor(Math.random() * size));
+        mostrarSecuencia();
+      }
+
       function nuevaSecuencia() {
         jugador = [];
         esperandoInput = false;
         jugantSequencia = true;
-        secuencia.push(Math.floor(Math.random() * 9));
+        secuencia.push(Math.floor(Math.random() * size));
         mostrarSecuencia();
       }
 
       function mostrarSecuencia() {
         let i = 0;
+        const cuadros = document.querySelectorAll('.cuadro');
+        // abans de reproduir, assegurar que no s'accepten clics
+        jugantSequencia = true;
         const intervalo = setInterval(() => {
           const id = secuencia[i];
           iluminarCuadro(id, 300);
@@ -148,15 +299,30 @@
         playTone(frecuencias[id], dur);
         setTimeout(() => {
           cuadro.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
-          cuadro.style.backgroundColor = "#888";
+          cuadro.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888';
         }, dur);
+      }
+
+      function onCuadroClick(e) {
+        ensureAudioContext();
+        if (jugantSequencia || !esperandoInput) return;
+        clearTimeout(tiempoLimite);
+        const id = parseInt(e.currentTarget.getAttribute('data-id'));
+        jugador.push(id);
+        // feedback local
+        e.currentTarget.style.backgroundColor = coloresFijos[id];
+        e.currentTarget.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 14px " + hexToRgba(coloresFijos[id], 0.32);
+        playTone(frecuencias[id], 220);
+        setTimeout(() => {
+          e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
+          e.currentTarget.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888';
+        }, 220);
+        verificar();
       }
 
       function iniciarTemporizador() {
         clearTimeout(tiempoLimite);
-        tiempoLimite = setTimeout(() => {
-          perderPorTiempo();
-        }, tiempoMaximo);
+        tiempoLimite = setTimeout(() => { perderPorTiempo(); }, tiempoMaximo);
       }
 
       function perderPorTiempo() {
@@ -164,42 +330,15 @@
         secuencia = [];
         jugador = [];
         nivell = 1;
-        nivellTexto.innerText = "Nivell: " + nivell;
+        nivellTexto.innerText = 'Nivell: ' + nivell;
         esperandoInput = false;
         jugantSequencia = false;
         setTimeout(() => {
-          mensaje.innerText = "";
-          // començar de nou amb un pas
-          secuencia.push(Math.floor(Math.random() * 9));
+          mensaje.innerText = '';
+          secuencia.push(Math.floor(Math.random() * size));
           mostrarSecuencia();
         }, 1500);
       }
-
-      cuadros.forEach(cuadro => {
-        cuadro.addEventListener("click", () => {
-          ensureAudioContext();
-          if (jugantSequencia || !esperandoInput) return;
-          clearTimeout(tiempoLimite);
-          const id = parseInt(cuadro.getAttribute("data-id"));
-          jugador.push(id);
-          cuadro.style.backgroundColor = coloresFijos[id];
-          cuadro.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 14px " + hexToRgba(coloresFijos[id], 0.32);
-          playTone(frecuencias[id], 220);
-          setTimeout(() => {
-            cuadro.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
-            cuadro.style.backgroundColor = "#888";
-          }, 220);
-          verificar();
-        });
-
-        cuadro.tabIndex = 0;
-        cuadro.addEventListener("keydown", (e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            cuadro.click();
-          }
-        });
-      });
 
       function verificar() {
         for (let i = 0; i < jugador.length; i++) {
@@ -208,12 +347,12 @@
             secuencia = [];
             jugador = [];
             nivell = 1;
-            nivellTexto.innerText = "Nivell: " + nivell;
+            nivellTexto.innerText = 'Nivell: ' + nivell;
             esperandoInput = false;
             jugantSequencia = false;
             setTimeout(() => {
-              mensaje.innerText = "";
-              secuencia.push(Math.floor(Math.random() * 9));
+              mensaje.innerText = '';
+              secuencia.push(Math.floor(Math.random() * size));
               mostrarSecuencia();
             }, 1500);
             return;
@@ -221,32 +360,32 @@
         }
 
         if (jugador.length === secuencia.length) {
-          // Si hem arribat al llindar del nivell actual, pujar nivell i REINICIAR la seqüència
+          // si hem arribat al llindar del nivell actual: incrementar nivell i reiniciar seqüència
           if (secuencia.length >= llindarDeNivell(nivell)) {
             const nivellAnterior = nivell;
             nivell++;
-            nivellTexto.innerText = "Nivell: " + nivell;
+            nivellTexto.innerText = 'Nivell: ' + nivell;
             mensaje.innerText = "🔓 Nivell " + nivellAnterior + " completat! Comença Nivell " + nivell + " amb seqüència nova.";
-            // Reiniciar seqüència des de zero per al nou nivell
+            // Reiniciar seqüència per nou nivell
             secuencia = [];
             jugador = [];
             esperandoInput = false;
             jugantSequencia = true;
             setTimeout(() => {
-              mensaje.innerText = "";
-              secuencia.push(Math.floor(Math.random() * 9));
+              mensaje.innerText = '';
+              secuencia.push(Math.floor(Math.random() * size));
               mostrarSecuencia();
             }, 900);
             return;
           }
 
-          // Si no s'arriba al llindar, afegir un nou pas i continuar
+          // si no arriba al llindar, afegir un nou pas i continuar
           mensaje.innerText = "✅ Bé!";
           esperandoInput = false;
           jugantSequencia = true;
           setTimeout(() => {
-            mensaje.innerText = "";
-            secuencia.push(Math.floor(Math.random() * 9));
+            mensaje.innerText = '';
+            secuencia.push(Math.floor(Math.random() * size));
             mostrarSecuencia();
           }, 700);
         } else {
@@ -254,18 +393,26 @@
         }
       }
 
-      function hexToRgba(hex, alpha) {
-        const h = hex.replace('#','');
-        const r = parseInt(h.substring(0,2),16);
-        const g = parseInt(h.substring(2,4),16);
-        const b = parseInt(h.substring(4,6),16);
-        return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-      }
+      // -------- Interacció del menú --------
+      menuButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const s = parseInt(btn.getAttribute('data-size'));
+          setupBoard(s);
+          iniciarJoc();
+        });
+      });
 
-      // començar: seqüència inicial d'un pas
-      secuencia.push(Math.floor(Math.random() * 9));
-      mostrarSecuencia();
+      btnRestart.addEventListener('click', () => {
+        // reinicia el joc amb la mateixa mida actual
+        iniciarJoc();
+      });
+
+      // -------- inici per defecte: 9 --------
+      setupBoard(9);
+      // mostrar instrucció en el missatge inicial
+      mensaje.innerText = 'Tria la graella al menú per començar o prova 3×3 per defecte.';
     };
   </script>
 </body>
 </html>
+```
