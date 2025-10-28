@@ -2,12 +2,13 @@
 <html lang="ca">
 <head>
   <meta charset="UTF-8" />
-  <title>Memoria Visual Pro - Pantalla d'inici</title>
+  <title>Memoria Visual Pro - Ajustos per mida</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root {
       --bg1: #ffdede;
       --bg2: #dff7ff;
-      --panel: rgba(255,255,255,0.92);
+      --panel: rgba(255,255,255,0.95);
       --gris: #888;
     }
     html,body { height:100%; margin:0; }
@@ -19,10 +20,10 @@
       align-items:center;
       justify-content:center;
       min-height:100vh;
-      padding:20px;
+      padding:18px;
     }
     .container {
-      width: 760px;
+      width: 820px;
       max-width: 100%;
       background: var(--panel);
       border-radius: 12px;
@@ -32,13 +33,7 @@
       overflow: visible;
     }
     h1 { margin: 6px 0 12px; color: #222; }
-    .menu-inline {
-      display:flex;
-      gap:12px;
-      justify-content:center;
-      margin-bottom:14px;
-      flex-wrap:wrap;
-    }
+    .menu-inline { display:flex; gap:12px; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
     .btn {
       background:#fff;
       border:2px solid #eee;
@@ -50,15 +45,7 @@
       transition: transform .08s, box-shadow .12s;
     }
     .btn:active { transform:translateY(1px) scale(.995); }
-    #status { margin-top:8px; color:#333; min-height:22px; }
-    #info {
-      display:flex;
-      gap:20px;
-      align-items:center;
-      justify-content:space-between;
-      margin: 10px 0 18px;
-      flex-wrap:wrap;
-    }
+    #info { display:flex; gap:20px; align-items:center; justify-content:space-between; margin: 10px 0 18px; flex-wrap:wrap; }
     #nivell { font-size:18px; color:#222; }
     #mensaje { font-size:16px; color:#333; min-height:22px; }
     #boardWrap { display:flex; justify-content:center; }
@@ -81,14 +68,7 @@
       -webkit-user-select:none;
     }
     .cuadro:active { transform: scale(0.98); }
-    .visually-hidden {
-      position: absolute;
-      left: -10000px;
-      top: auto;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-    }
+    .visually-hidden { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
     footer { margin-top:14px; color:#666; font-size:13px; }
 
     /* Overlay d'inici */
@@ -125,15 +105,13 @@
       border:2px solid transparent;
       cursor:pointer;
       font-weight:700;
+      user-select:none;
     }
     .size-option.selected {
       border-color:#1e88e5;
       background: linear-gradient(180deg,#eaf4ff,#fff);
     }
-    .small {
-      font-size:13px;
-      color:#555;
-    }
+    .small { font-size:13px; color:#555; }
 
     @media (max-width:520px) {
       .cuadro { width: 64px; height:64px; border-radius:10px; }
@@ -163,7 +141,7 @@
     <div class="visually-hidden" id="instruccio">Repeteix la seqüència de colors amb clics o toc.</div>
     <footer>Tria la mida i prem Començar</footer>
 
-    <!-- OVERLAY D'INICI: mostra només abans de començar -->
+    <!-- OVERLAY D'INICI: mostra abans de començar -->
     <div class="overlay" id="startOverlay" role="dialog" aria-modal="true" aria-label="Pantalla d'inici">
       <div class="start-panel">
         <h2>Començar partida</h2>
@@ -186,7 +164,7 @@
 
   <script>
     window.onload = function () {
-      // Elements UI
+      // UI
       const overlay = document.getElementById('startOverlay');
       const startBtn = document.getElementById('startBtn');
       const sizeOptions = document.querySelectorAll('.size-option');
@@ -200,6 +178,7 @@
       let cols = 3;
       let coloresFijos = [];
       let frecuencias = [];
+      let baseStep = 3; // per defecte 3x3 -> 3
 
       let secuencia = [];
       let jugador = [];
@@ -209,6 +188,10 @@
       let tiempoLimite;
       const tiempoMaximo = 3500;
 
+      // Map per timeouts per quadrat (evita quedar marcat)
+      const cuadroTimeouts = new Map();
+
+      // Audio
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       let audioCtx = null;
       function ensureAudioContext() { if (!audioCtx) audioCtx = new AudioContext(); }
@@ -228,6 +211,7 @@
         osc.stop(now + duration / 1000 + 0.02);
       }
 
+      // Helpers colors / frecs
       function hexToRgba(hex, alpha) {
         const h = hex.replace('#','');
         const r = parseInt(h.substring(0,2),16);
@@ -236,9 +220,9 @@
         return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
       }
 
-      function llindarDeNivell(n) { return n * 2; }
+      // llindar segons baseStep: nivell * baseStep
+      function llindarDeNivell(n) { return n * baseStep; }
 
-      // paletes i freqs
       function generarColors(n) {
         const baseHue = [0, 200, 120, 38, 270, 330, 180, 230, 28, 15, 260, 300, 45, 80, 160, 210];
         const colors = [];
@@ -265,12 +249,18 @@
         return frecs;
       }
 
-      // Setup del tauler segons mida (no comença el joc)
+      // -------- Construcció del tauler (no inicia el joc) --------
       function setupBoard(n) {
         size = n;
         if (n === 4) cols = 2;
         else if (n === 9) cols = 3;
         else cols = 4;
+
+        // baseStep segons mida: 2x2 -> 2, 3x3 -> 3, 4x4 -> 4
+        if (n === 4) baseStep = 2;
+        else if (n === 9) baseStep = 3;
+        else baseStep = 4;
+
         coloresFijos = generarColors(size);
         frecuencias = generarFrecuencias(size);
         cuadrosContainer.innerHTML = '';
@@ -302,7 +292,43 @@
         });
       }
 
-      // Joc
+      // -------- Funcions de color i feedback per-element (evita quedar marcat) --------
+      function clearCuadroTimeout(id) {
+        if (cuadroTimeouts.has(id)) {
+          clearTimeout(cuadroTimeouts.get(id));
+          cuadroTimeouts.delete(id);
+        }
+      }
+
+      function iluminarCuadro(id, dur = 300) {
+        const cuadro = document.querySelector(`.cuadro[data-id="${id}"]`);
+        if (!cuadro) return;
+        clearCuadroTimeout(id);
+        cuadro.style.backgroundColor = coloresFijos[id];
+        cuadro.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 18px " + hexToRgba(coloresFijos[id], 0.35);
+        playTone(frecuencias[id], dur);
+        const t = setTimeout(() => {
+          cuadro.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
+          cuadro.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888';
+          cuadroTimeouts.delete(id);
+        }, dur);
+        cuadroTimeouts.set(id, t);
+      }
+
+      function feedbackLocalCuadro(cuadroEl, id) {
+        clearCuadroTimeout(id);
+        cuadroEl.style.backgroundColor = coloresFijos[id];
+        cuadroEl.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 14px " + hexToRgba(coloresFijos[id], 0.32);
+        playTone(frecuencias[id], 220);
+        const t = setTimeout(() => {
+          cuadroEl.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
+          cuadroEl.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888';
+          cuadroTimeouts.delete(id);
+        }, 220);
+        cuadroTimeouts.set(id, t);
+      }
+
+      // -------- Lògica del joc --------
       function iniciarJoc() {
         secuencia = [];
         jugador = [];
@@ -311,14 +337,14 @@
         mensaje.innerText = '';
         esperandoInput = false;
         jugantSequencia = true;
-        // posar overlay invisible
         overlay.style.display = 'none';
-        // primer pas
-        secuencia.push(Math.floor(Math.random() * size));
+        // primer pas: crear seqüència inicial amb baseStep elements
+        for (let i = 0; i < baseStep; i++) secuencia.push(Math.floor(Math.random() * size));
         mostrarSecuencia();
       }
 
-      function nuevaSecuencia() {
+      function nuevaSecuenciaUnaPas() {
+        // afegir un sol pas (com abans)
         jugador = [];
         esperandoInput = false;
         jugantSequencia = true;
@@ -328,6 +354,7 @@
 
       function mostrarSecuencia() {
         let i = 0;
+        jugantSequencia = true;
         const interval = setInterval(() => {
           const id = secuencia[i];
           iluminarCuadro(id, 300);
@@ -344,31 +371,13 @@
         }, 500);
       }
 
-      function iluminarCuadro(id, dur = 300) {
-        const cuadro = document.querySelector(`.cuadro[data-id="${id}"]`);
-        if (!cuadro) return;
-        cuadro.style.backgroundColor = coloresFijos[id];
-        cuadro.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 18px " + hexToRgba(coloresFijos[id], 0.35);
-        playTone(frecuencias[id], dur);
-        setTimeout(() => {
-          cuadro.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
-          cuadro.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888';
-        }, dur);
-      }
-
       function onCuadroClick(e) {
         ensureAudioContext();
         if (jugantSequencia || !esperandoInput) return;
         clearTimeout(tiempoLimite);
         const id = parseInt(e.currentTarget.getAttribute('data-id'));
         jugador.push(id);
-        e.currentTarget.style.backgroundColor = coloresFijos[id];
-        e.currentTarget.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 14px " + hexToRgba(coloresFijos[id], 0.32);
-        playTone(frecuencias[id], 220);
-        setTimeout(() => {
-          e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
-          e.currentTarget.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888';
-        }, 220);
+        feedbackLocalCuadro(e.currentTarget, id);
         verificar();
       }
 
@@ -387,7 +396,8 @@
         jugantSequencia = false;
         setTimeout(() => {
           mensaje.innerText = '';
-          secuencia.push(Math.floor(Math.random() * size));
+          // seqüència inicial baseStep
+          for (let i = 0; i < baseStep; i++) secuencia.push(Math.floor(Math.random() * size));
           mostrarSecuencia();
         }, 1500);
       }
@@ -404,7 +414,7 @@
             jugantSequencia = false;
             setTimeout(() => {
               mensaje.innerText = '';
-              secuencia.push(Math.floor(Math.random() * size));
+              for (let k = 0; k < baseStep; k++) secuencia.push(Math.floor(Math.random() * size));
               mostrarSecuencia();
             }, 1500);
             return;
@@ -412,29 +422,31 @@
         }
 
         if (jugador.length === secuencia.length) {
+          // si hem arribat al llindar del nivell actual: incrementar nivell i reiniciar seqüència amb baseStep elements
           if (secuencia.length >= llindarDeNivell(nivell)) {
             const nivellAnterior = nivell;
             nivell++;
             nivellTexto.innerText = 'Nivell: ' + nivell;
             mensaje.innerText = "🔓 Nivell " + nivellAnterior + " completat! Comença Nivell " + nivell + " amb seqüència nova.";
-            // reinici de seqüència per nou nivell
             secuencia = [];
             jugador = [];
             esperandoInput = false;
             jugantSequencia = true;
             setTimeout(() => {
               mensaje.innerText = '';
-              secuencia.push(Math.floor(Math.random() * size));
+              for (let k = 0; k < baseStep; k++) secuencia.push(Math.floor(Math.random() * size));
               mostrarSecuencia();
             }, 900);
             return;
           }
 
+          // si no arriba al llindar, afegir un nou pas i continuar
           mensaje.innerText = "✅ Bé!";
           esperandoInput = false;
           jugantSequencia = true;
           setTimeout(() => {
             mensaje.innerText = '';
+            // afegir un sol pas
             secuencia.push(Math.floor(Math.random() * size));
             mostrarSecuencia();
           }, 700);
@@ -457,7 +469,6 @@
       });
 
       startBtn.addEventListener('click', () => {
-        // configurar tauler i iniciar joc, overlay desapareix
         setupBoardAndStart(size);
       });
 
@@ -466,66 +477,14 @@
         iniciarJoc();
       });
 
-      // setupBoardAndStart: configura el tauler i inicia el joc
       function setupBoardAndStart(n) {
         setupBoard(n);
-        // ocultar overlay i començar joc
         overlay.style.display = 'none';
         iniciarJoc();
       }
 
-      // Setup board sense iniciar
-      function setupBoard(n) {
-        size = n;
-        if (n === 4) cols = 2;
-        else if (n === 9) cols = 3;
-        else cols = 4;
-        coloresFijos = generarColors(size);
-        frecuencias = generarFrecuencias(size);
-        cuadrosContainer.innerHTML = '';
-        cuadrosContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        for (let i = 0; i < size; i++) {
-          const cuadro = document.createElement('div');
-          cuadro.classList.add('cuadro');
-          cuadro.setAttribute('data-id', i);
-          cuadro.setAttribute('role', 'button');
-          cuadro.setAttribute('aria-label', 'Quadrat ' + (i + 1));
-          cuadro.tabIndex = 0;
-          cuadrosContainer.appendChild(cuadro);
-        }
-        attachListeners();
-        btnRestart.style.display = 'inline-block';
-      }
-
-      // Generadors implementats més amunt (reutilitzar)
-      function generarColors(n) {
-        const baseHue = [0, 200, 120, 38, 270, 330, 180, 230, 28, 15, 260, 300, 45, 80, 160, 210];
-        const colors = [];
-        for (let i = 0; i < n; i++) {
-          const hue = baseHue[i % baseHue.length];
-          colors.push(hslToHex((hue + (i*13)) % 360, 75, 50));
-        }
-        return colors;
-      }
-      function hslToHex(h, s, l) {
-        s /= 100; l /= 100;
-        const k = n => (n + h / 30) % 12;
-        const a = s * Math.min(l, 1 - l);
-        const f = n => {
-          const color = l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-          return Math.round(255 * color).toString(16).padStart(2, '0');
-        };
-        return `#${f(0)}${f(8)}${f(4)}`;
-      }
-      function generarFrecuencias(n) {
-        const base = [440, 494, 523.25, 587.33, 659.25, 740, 830, 880, 987.77, 1108.73, 1244.51, 1318.51, 1479.98, 1568, 1760, 1975.53];
-        const frecs = [];
-        for (let i = 0; i < n; i++) frecs.push(base[i % base.length]);
-        return frecs;
-      }
-
-      // Iniciar per defecte (mostra overlay)
-      setupBoard(9); // pre-configura la visualització per 3x3
+      // Inicialització per defecte: prepara la vista i mostra overlay
+      setupBoard(9);
       overlay.style.display = 'flex';
       mensaje.innerText = 'Tria la mida i prem Començar';
     };
