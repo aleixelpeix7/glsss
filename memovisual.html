@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
   <meta charset="UTF-8" />
-  <title>Memoria Visual Pro - Ajustos per mida</title>
+  <title>Memoria Visual Pro - Amb pantalla de final</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root {
@@ -71,7 +71,7 @@
     .visually-hidden { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
     footer { margin-top:14px; color:#666; font-size:13px; }
 
-    /* Overlay d'inici */
+    /* Overlay (ús compartit per start i game over) */
     .overlay {
       position: absolute;
       inset: 0;
@@ -160,6 +160,19 @@
         <p class="small" style="margin-top:12px;color:#666">Pots reiniciar la partida després des de la pantalla principal</p>
       </div>
     </div>
+
+    <!-- OVERLAY de final de partida -->
+    <div class="overlay" id="gameOverOverlay" role="dialog" aria-modal="true" aria-label="Has perdut" style="display:none;">
+      <div class="start-panel">
+        <h2>Has perdut!</h2>
+        <p class="small">T’has quedat al nivell <strong id="finalLevel">1</strong></p>
+        <p class="small" id="finalSeqInfo" style="margin-top:6px;color:#666"></p>
+        <div style="margin-top:12px;">
+          <button class="btn" id="retryBtn">Torna a començar</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -173,12 +186,17 @@
       const mensaje = document.getElementById('mensaje');
       const nivellTexto = document.getElementById('nivell');
 
+      const gameOverOverlay = document.getElementById('gameOverOverlay');
+      const finalLevelEl = document.getElementById('finalLevel');
+      const finalSeqInfo = document.getElementById('finalSeqInfo');
+      const retryBtn = document.getElementById('retryBtn');
+
       // Estat i configuració
       let size = 9;
       let cols = 3;
       let coloresFijos = [];
       let frecuencias = [];
-      let baseStep = 3; // 2×2 -> 2, 3×3 -> 3, 4×4 -> 4, s'assigna en setupBoard
+      let baseStep = 3; // s'assigna en setupBoard
 
       let secuencia = [];
       let jugador = [];
@@ -190,6 +208,9 @@
 
       // Map per timeouts per quadrat
       const cuadroTimeouts = new Map();
+
+      // Per mostrar info final (nombre màxim de cops correctes consecutius)
+      let maxCorrectInRun = 0;
 
       // Audio
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -333,11 +354,13 @@
         secuencia = [];
         jugador = [];
         nivell = 1;
+        maxCorrectInRun = 0;
         nivellTexto.innerText = 'Nivell: ' + nivell;
         mensaje.innerText = '';
         esperandoInput = false;
         jugantSequencia = true;
         overlay.style.display = 'none';
+        gameOverOverlay.style.display = 'none';
         // seqüència inicial: començar amb 1 pas (com abans)
         secuencia.push(Math.floor(Math.random() * size));
         mostrarSecuencia();
@@ -382,41 +405,34 @@
 
       function iniciarTemporizador() {
         clearTimeout(tiempoLimite);
-        tiempoLimite = setTimeout(() => { perderPorTiempo(); }, tiempoMaximo);
+        tiempoLimite = setTimeout(() => { perderPerTemps(); }, tiempoMaximo);
       }
 
-      function perderPorTiempo() {
-        mensaje.innerText = "⏱️ Has trigat massa. Reiniciant...";
-        secuencia = [];
-        jugador = [];
-        nivell = 1;
-        nivellTexto.innerText = 'Nivell: ' + nivell;
+      // Mostrar overlay de final amb dades
+      function mostrarGameOver() {
+        finalLevelEl.innerText = nivell;
+        finalSeqInfo.innerText = 'Longitud de la seqüència: ' + secuencia.length;
+        gameOverOverlay.style.display = 'flex';
+      }
+
+      function perderPerTemps() {
+        // quan es queda sense temps tractem com a pèrdua
         esperandoInput = false;
         jugantSequencia = false;
-        setTimeout(() => {
-          mensaje.innerText = '';
-          // començar de nou amb 1 pas
-          secuencia.push(Math.floor(Math.random() * size));
-          mostrarSecuencia();
-        }, 1500);
+        mostrarGameOver();
       }
 
       function verificar() {
+        // comptador per mesurar el màxim d'encerts si vols usar-lo
+        if (jugador.length > maxCorrectInRun) maxCorrectInRun = jugador.length;
+
         for (let i = 0; i < jugador.length; i++) {
           if (jugador[i] !== secuencia[i]) {
-            mensaje.innerText = "❌ Has fallat. Reiniciant...";
-            secuencia = [];
-            jugador = [];
-            nivell = 1;
-            nivellTexto.innerText = 'Nivell: ' + nivell;
+            // Pèrdua: mostrar overlay de final en lloc de reiniciar de seguida
             esperandoInput = false;
             jugantSequencia = false;
-            setTimeout(() => {
-              mensaje.innerText = '';
-              // nova seqüència començant amb 1 pas
-              secuencia.push(Math.floor(Math.random() * size));
-              mostrarSecuencia();
-            }, 1500);
+            // mantenim nivell tal qual (mostra el nivell on estaves)
+            mostrarGameOver();
             return;
           }
         }
@@ -428,7 +444,7 @@
             nivell++;
             nivellTexto.innerText = 'Nivell: ' + nivell;
             mensaje.innerText = "🔓 Nivell " + nivellAnterior + " completat! Comença Nivell " + nivell + ".";
-            // Reiniciar seqüència per al nou nivell però COMENÇAR amb 1 pas (com vas demanar)
+            // Reiniciar seqüència per al nou nivell però COMENÇAR amb 1 pas
             secuencia = [];
             jugador = [];
             esperandoInput = false;
@@ -441,7 +457,7 @@
             return;
           }
 
-          // si no s'arriba al llindar, afegir un pas i continuar (com abans)
+          // si no s'arriba al llindar, afegir un pas i continuar
           mensaje.innerText = "✅ Bé!";
           esperandoInput = false;
           jugantSequencia = true;
@@ -470,6 +486,12 @@
 
       startBtn.addEventListener('click', () => {
         setupBoardAndStart(size);
+      });
+
+      retryBtn.addEventListener('click', () => {
+        // tancar overlay de final i reiniciar amb la mateixa mida
+        gameOverOverlay.style.display = 'none';
+        iniciarJoc();
       });
 
       btnRestart.addEventListener('click', () => {
