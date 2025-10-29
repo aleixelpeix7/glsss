@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
   <meta charset="UTF-8" />
-  <title>Memoria Visual Pro - Amb pantalla de final</title>
+  <title>Memoria Visual Pro - Retard a la pèrdua</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root {
@@ -68,6 +68,10 @@
       -webkit-user-select:none;
     }
     .cuadro:active { transform: scale(0.98); }
+    .cuadro.wrong {
+      box-shadow: 0 10px 30px rgba(0,0,0,0.28) !important;
+      transform: scale(0.99);
+    }
     .visually-hidden { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
     footer { margin-top:14px; color:#666; font-size:13px; }
 
@@ -361,7 +365,7 @@
         jugantSequencia = true;
         overlay.style.display = 'none';
         gameOverOverlay.style.display = 'none';
-        // seqüència inicial: començar amb 1 pas (com abans)
+        // seqüència inicial: començar amb 1 pas
         secuencia.push(Math.floor(Math.random() * size));
         mostrarSecuencia();
       }
@@ -399,6 +403,38 @@
         clearTimeout(tiempoLimite);
         const id = parseInt(e.currentTarget.getAttribute('data-id'));
         jugador.push(id);
+
+        // Si l'entrada falla, primer mostrem el feedback (il·luminar el botó equivocadament),
+        // després un missatge de fallada, i després, amb un retard, mostrem la pantalla de final.
+        const currentIndex = jugador.length - 1;
+        if (secuencia[currentIndex] !== id) {
+          // mostrar el botó equivocat (il·luminar amb classe .wrong perquè quedi clar)
+          clearCuadroTimeout(id);
+          const el = e.currentTarget;
+          el.classList.add('wrong');
+          el.style.backgroundColor = coloresFijos[id];
+          el.style.boxShadow = "0 10px 30px rgba(0,0,0,0.35), 0 0 20px " + hexToRgba(coloresFijos[id], 0.4);
+          playTone(220, 350, 'sawtooth'); // so d'error diferent
+          // missatge immediat
+          mensaje.innerText = "❌ Has fallat...";
+          esperandoInput = false;
+          jugantSequencia = false;
+          // després d'un petit retard revertim l'estat visual, mostrem overlay de final i netegem la classe
+          setTimeout(() => {
+            // tornar el botó a l'estat gris (netejar timeouts possibles)
+            clearCuadroTimeout(id);
+            el.classList.remove('wrong');
+            el.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
+            el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888';
+            // mostrar overlay de final amb dades
+            mostrarGameOver();
+            // netejar missatge breument
+            setTimeout(() => { mensaje.innerText = ''; }, 700);
+          }, 700); // retard abans d'anar a la pantalla de mort
+          return;
+        }
+
+        // Si correcte: feedback normal i continuar
         feedbackLocalCuadro(e.currentTarget, id);
         verificar();
       }
@@ -416,10 +452,14 @@
       }
 
       function perderPerTemps() {
-        // quan es queda sense temps tractem com a pèrdua
+        // quan es queda sense temps fem el mateix flux: missatge breu i després overlay
         esperandoInput = false;
         jugantSequencia = false;
-        mostrarGameOver();
+        mensaje.innerText = "⏱️ Has trigat massa...";
+        setTimeout(() => {
+          mensaje.innerText = '';
+          mostrarGameOver();
+        }, 700);
       }
 
       function verificar() {
@@ -428,10 +468,9 @@
 
         for (let i = 0; i < jugador.length; i++) {
           if (jugador[i] !== secuencia[i]) {
-            // Pèrdua: mostrar overlay de final en lloc de reiniciar de seguida
+            // no hauria d'arribar aquí perquè ho gestionem abans, però per seguretat:
             esperandoInput = false;
             jugantSequencia = false;
-            // mantenim nivell tal qual (mostra el nivell on estaves)
             mostrarGameOver();
             return;
           }
@@ -488,13 +527,15 @@
         setupBoardAndStart(size);
       });
 
+      // Ara el botó de reinici a la pantalla de "Has perdut" porta a la pantalla d'inici (overlay d'inici)
       retryBtn.addEventListener('click', () => {
-        // tancar overlay de final i reiniciar amb la mateixa mida
         gameOverOverlay.style.display = 'none';
-        iniciarJoc();
+        // mostrar la pantalla d'inici per triar mida (i deixar la mida anterior seleccionada)
+        overlay.style.display = 'flex';
       });
 
       btnRestart.addEventListener('click', () => {
+        // si vols reiniciar directament sense passar per l'inici, manté aquest botó
         iniciarJoc();
       });
 
