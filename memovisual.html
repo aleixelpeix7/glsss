@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
   <meta charset="UTF-8" />
-  <title>Memoria Visual Pro - Retard a la pèrdua</title>
+  <title>Memoria Visual Pro - Pausa amb ESC</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root {
@@ -33,7 +33,6 @@
       overflow: visible;
     }
     h1 { margin: 6px 0 12px; color: #222; }
-    .menu-inline { display:flex; gap:12px; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
     .btn {
       background:#fff;
       border:2px solid #eee;
@@ -75,7 +74,7 @@
     .visually-hidden { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
     footer { margin-top:14px; color:#666; font-size:13px; }
 
-    /* Overlay (ús compartit per start i game over) */
+    /* Overlay (ús compartit per start, pausa i game over) */
     .overlay {
       position: absolute;
       inset: 0;
@@ -117,19 +116,25 @@
     }
     .small { font-size:13px; color:#555; }
 
+    .pause-level {
+      font-size:34px;
+      font-weight:800;
+      margin: 6px 0 8px;
+      color:#222;
+    }
+
+    .pause-buttons { display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+
     @media (max-width:520px) {
       .cuadro { width: 64px; height:64px; border-radius:10px; }
       .start-panel { width: 92%; padding:16px; }
+      .pause-level { font-size:26px; }
     }
   </style>
 </head>
 <body>
   <div class="container" role="application" aria-label="Memoria Visual Pro">
     <h1>🧠 Memoria Visual Pro</h1>
-
-    <div class="menu-inline" aria-hidden="true">
-      <button class="btn" id="btnRestart" style="display:none">Reinicia (mateixa graella)</button>
-    </div>
 
     <div id="info">
       <div id="nivell">Nivell: 1</div>
@@ -143,7 +148,7 @@
     </div>
 
     <div class="visually-hidden" id="instruccio">Repeteix la seqüència de colors amb clics o toc.</div>
-    <footer>Tria la mida i prem Començar</footer>
+    <footer>Prem ESC per obrir el menú de pausa</footer>
 
     <!-- OVERLAY d'inici -->
     <div class="overlay" id="startOverlay" role="dialog" aria-modal="true" aria-label="Pantalla d'inici">
@@ -161,7 +166,20 @@
           <button class="btn" id="startBtn">Començar</button>
         </div>
 
-        <p class="small" style="margin-top:12px;color:#666">Pots reiniciar la partida després des de la pantalla principal</p>
+        <p class="small" style="margin-top:12px;color:#666">Pots prémer ESC per pausar durant el joc</p>
+      </div>
+    </div>
+
+    <!-- OVERLAY de pausa (mateixa mida que el d'inici) -->
+    <div class="overlay" id="pauseOverlay" role="dialog" aria-modal="true" aria-label="Pausa" style="display:none;">
+      <div class="start-panel">
+        <h2>Pausa</h2>
+        <div class="pause-level" id="pauseLevelText">Nivell 1</div>
+        <div class="pause-buttons">
+          <button class="btn" id="resumeBtn">Continuar</button>
+          <button class="btn" id="restartSameBtn">Reinicia mateixes</button>
+          <button class="btn" id="toStartBtn">Torna a l'inici</button>
+        </div>
       </div>
     </div>
 
@@ -172,7 +190,7 @@
         <p class="small">T’has quedat al nivell <strong id="finalLevel">1</strong></p>
         <p class="small" id="finalSeqInfo" style="margin-top:6px;color:#666"></p>
         <div style="margin-top:12px;">
-          <button class="btn" id="retryBtn">Torna a començar</button>
+          <button class="btn" id="retryBtn">Torna a l'inici</button>
         </div>
       </div>
     </div>
@@ -182,13 +200,18 @@
   <script>
     window.onload = function () {
       // UI
-      const overlay = document.getElementById('startOverlay');
+      const startOverlay = document.getElementById('startOverlay');
       const startBtn = document.getElementById('startBtn');
       const sizeOptions = document.querySelectorAll('.size-option');
-      const btnRestart = document.getElementById('btnRestart');
       const cuadrosContainer = document.getElementById('cuadros');
       const mensaje = document.getElementById('mensaje');
       const nivellTexto = document.getElementById('nivell');
+
+      const pauseOverlay = document.getElementById('pauseOverlay');
+      const pauseLevelText = document.getElementById('pauseLevelText');
+      const resumeBtn = document.getElementById('resumeBtn');
+      const restartSameBtn = document.getElementById('restartSameBtn');
+      const toStartBtn = document.getElementById('toStartBtn');
 
       const gameOverOverlay = document.getElementById('gameOverOverlay');
       const finalLevelEl = document.getElementById('finalLevel');
@@ -200,21 +223,19 @@
       let cols = 3;
       let coloresFijos = [];
       let frecuencias = [];
-      let baseStep = 3; // s'assigna en setupBoard
+      let baseStep = 3; // s'assigna en setupBoard segons mida
 
       let secuencia = [];
       let jugador = [];
       let nivell = 1;
       let esperandoInput = false;
       let jugantSequencia = false;
+      let paused = false;
       let tiempoLimite;
       const tiempoMaximo = 3500;
 
       // Map per timeouts per quadrat
       const cuadroTimeouts = new Map();
-
-      // Per mostrar info final (nombre màxim de cops correctes consecutius)
-      let maxCorrectInRun = 0;
 
       // Audio
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -245,7 +266,6 @@
         return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
       }
 
-      // llindar segons mida: nivell * baseStep
       function llindarDeNivell(n) { return n * baseStep; }
 
       function generarColors(n) {
@@ -281,7 +301,6 @@
         else if (n === 9) cols = 3;
         else cols = 4;
 
-        // assignar baseStep: determina el llindar del primer nivell i l'increment per nivell
         if (n === 4) baseStep = 2;
         else if (n === 9) baseStep = 3;
         else baseStep = 4;
@@ -300,7 +319,6 @@
           cuadrosContainer.appendChild(cuadro);
         }
         attachListeners();
-        btnRestart.style.display = 'inline-block';
       }
 
       function attachListeners() {
@@ -358,14 +376,15 @@
         secuencia = [];
         jugador = [];
         nivell = 1;
-        maxCorrectInRun = 0;
         nivellTexto.innerText = 'Nivell: ' + nivell;
         mensaje.innerText = '';
         esperandoInput = false;
-        jugantSequencia = true;
-        overlay.style.display = 'none';
+        jugantSequencia = false;
+        paused = false;
+        startOverlay.style.display = 'none';
+        pauseOverlay.style.display = 'none';
         gameOverOverlay.style.display = 'none';
-        // seqüència inicial: començar amb 1 pas
+        // seqüència inicial d'1 pas
         secuencia.push(Math.floor(Math.random() * size));
         mostrarSecuencia();
       }
@@ -390,8 +409,10 @@
             setTimeout(() => {
               jugador = [];
               jugantSequencia = false;
-              esperandoInput = true;
-              iniciarTemporizador();
+              if (!paused) {
+                esperandoInput = true;
+                iniciarTemporizador();
+              }
             }, 220);
           }
         }, 500);
@@ -399,42 +420,37 @@
 
       function onCuadroClick(e) {
         ensureAudioContext();
-        if (jugantSequencia || !esperandoInput) return;
+        // bloquejar entrades si es reprodueix seqüència, si estem pausats o no estem esperant input
+        if (jugantSequencia || paused || !esperandoInput) return;
         clearTimeout(tiempoLimite);
         const id = parseInt(e.currentTarget.getAttribute('data-id'));
         jugador.push(id);
 
-        // Si l'entrada falla, primer mostrem el feedback (il·luminar el botó equivocadament),
-        // després un missatge de fallada, i després, amb un retard, mostrem la pantalla de final.
         const currentIndex = jugador.length - 1;
         if (secuencia[currentIndex] !== id) {
-          // mostrar el botó equivocat (il·luminar amb classe .wrong perquè quedi clar)
+          // mostrar feedback equivocat, deixar missatge i després mostrar overlay de final
           clearCuadroTimeout(id);
           const el = e.currentTarget;
           el.classList.add('wrong');
           el.style.backgroundColor = coloresFijos[id];
           el.style.boxShadow = "0 10px 30px rgba(0,0,0,0.35), 0 0 20px " + hexToRgba(coloresFijos[id], 0.4);
-          playTone(220, 350, 'sawtooth'); // so d'error diferent
-          // missatge immediat
+          playTone(220, 350, 'sawtooth');
           mensaje.innerText = "❌ Has fallat...";
           esperandoInput = false;
           jugantSequencia = false;
-          // després d'un petit retard revertim l'estat visual, mostrem overlay de final i netegem la classe
+          // retard abans d'anar a la pantalla de mort
           setTimeout(() => {
-            // tornar el botó a l'estat gris (netejar timeouts possibles)
             clearCuadroTimeout(id);
             el.classList.remove('wrong');
             el.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
             el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888';
-            // mostrar overlay de final amb dades
             mostrarGameOver();
-            // netejar missatge breument
             setTimeout(() => { mensaje.innerText = ''; }, 700);
-          }, 700); // retard abans d'anar a la pantalla de mort
+          }, 700);
           return;
         }
 
-        // Si correcte: feedback normal i continuar
+        // correcte
         feedbackLocalCuadro(e.currentTarget, id);
         verificar();
       }
@@ -444,7 +460,6 @@
         tiempoLimite = setTimeout(() => { perderPerTemps(); }, tiempoMaximo);
       }
 
-      // Mostrar overlay de final amb dades
       function mostrarGameOver() {
         finalLevelEl.innerText = nivell;
         finalSeqInfo.innerText = 'Longitud de la seqüència: ' + secuencia.length;
@@ -452,7 +467,7 @@
       }
 
       function perderPerTemps() {
-        // quan es queda sense temps fem el mateix flux: missatge breu i després overlay
+        if (paused) return;
         esperandoInput = false;
         jugantSequencia = false;
         mensaje.innerText = "⏱️ Has trigat massa...";
@@ -463,12 +478,8 @@
       }
 
       function verificar() {
-        // comptador per mesurar el màxim d'encerts si vols usar-lo
-        if (jugador.length > maxCorrectInRun) maxCorrectInRun = jugador.length;
-
         for (let i = 0; i < jugador.length; i++) {
           if (jugador[i] !== secuencia[i]) {
-            // no hauria d'arribar aquí perquè ho gestionem abans, però per seguretat:
             esperandoInput = false;
             jugantSequencia = false;
             mostrarGameOver();
@@ -477,13 +488,11 @@
         }
 
         if (jugador.length === secuencia.length) {
-          // comprovem si hem arribat al llindar del nivell actual
           if (secuencia.length >= llindarDeNivell(nivell)) {
             const nivellAnterior = nivell;
             nivell++;
             nivellTexto.innerText = 'Nivell: ' + nivell;
             mensaje.innerText = "🔓 Nivell " + nivellAnterior + " completat! Comença Nivell " + nivell + ".";
-            // Reiniciar seqüència per al nou nivell però COMENÇAR amb 1 pas
             secuencia = [];
             jugador = [];
             esperandoInput = false;
@@ -496,7 +505,6 @@
             return;
           }
 
-          // si no s'arriba al llindar, afegir un pas i continuar
           mensaje.innerText = "✅ Bé!";
           esperandoInput = false;
           jugantSequencia = true;
@@ -510,7 +518,51 @@
         }
       }
 
-      // ---------- Interaccions overlay ----------
+      // ---------- Pausa amb ESC ----------
+      function openPause() {
+        if (startOverlay.style.display !== 'none' || gameOverOverlay.style.display === 'flex') return;
+        paused = true;
+        // aturar temporitzador
+        clearTimeout(tiempoLimite);
+        pauseLevelText.innerText = 'Nivell ' + nivell;
+        pauseOverlay.style.display = 'flex';
+      }
+
+      function closePause() {
+        pauseOverlay.style.display = 'none';
+        paused = false;
+        // si estàvem en espera, reiniciar temporitzador
+        if (esperandoInput) iniciarTemporizador();
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          // si està visible el gameOverOverlay, ESC no fa pause
+          if (gameOverOverlay.style.display === 'flex') return;
+          if (pauseOverlay.style.display === 'flex') closePause();
+          else openPause();
+        }
+      });
+
+      resumeBtn.addEventListener('click', () => {
+        closePause();
+      });
+
+      restartSameBtn.addEventListener('click', () => {
+        // reiniciar amb la mateixa graella: tancar pausa i reiniciar joc
+        pauseOverlay.style.display = 'none';
+        paused = false;
+        iniciarJoc();
+      });
+
+      toStartBtn.addEventListener('click', () => {
+        // tancar pausa i mostrar pantalla d'inici (manté mida seleccionada actual)
+        pauseOverlay.style.display = 'none';
+        paused = false;
+        startOverlay.style.display = 'flex';
+      });
+
+      // ---------- Interaccions overlays i reinici final ----------
       sizeOptions.forEach(opt => {
         opt.addEventListener('click', () => {
           sizeOptions.forEach(o => { o.classList.remove('selected'); o.setAttribute('aria-checked','false'); });
@@ -527,21 +579,17 @@
         setupBoardAndStart(size);
       });
 
-      // Ara el botó de reinici a la pantalla de "Has perdut" porta a la pantalla d'inici (overlay d'inici)
       retryBtn.addEventListener('click', () => {
+        // al game over: portar a la pantalla d'inici
         gameOverOverlay.style.display = 'none';
-        // mostrar la pantalla d'inici per triar mida (i deixar la mida anterior seleccionada)
-        overlay.style.display = 'flex';
+        startOverlay.style.display = 'flex';
       });
 
-      btnRestart.addEventListener('click', () => {
-        // si vols reiniciar directament sense passar per l'inici, manté aquest botó
-        iniciarJoc();
-      });
-
+      // reiniciar mateixes (no mostrem botó durant el joc)
+      // funció d'inici general
       function setupBoardAndStart(n) {
         setupBoard(n);
-        overlay.style.display = 'none';
+        startOverlay.style.display = 'none';
         iniciarJoc();
       }
 
@@ -552,7 +600,6 @@
         else if (n === 9) cols = 3;
         else cols = 4;
 
-        // assignar baseStep
         if (n === 4) baseStep = 2;
         else if (n === 9) baseStep = 3;
         else baseStep = 4;
@@ -571,12 +618,11 @@
           cuadrosContainer.appendChild(cuadro);
         }
         attachListeners();
-        btnRestart.style.display = 'inline-block';
       }
 
-      // Inicialització per defecte: prepara la vista i mostra overlay
+      // Inicialització per defecte: prepara la vista i mostra overlay d'inici
       setupBoard(9);
-      overlay.style.display = 'flex';
+      startOverlay.style.display = 'flex';
       mensaje.innerText = 'Tria la mida i prem Començar';
     };
   </script>
