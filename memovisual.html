@@ -2,14 +2,16 @@
 <html lang="ca">
 <head>
   <meta charset="utf-8" />
-  <title>Memoria Visual Pro - Tema fosc amb fons blau</title>
+  <title>Memoria Visual Pro - Panells més clars</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root{
-      --page-accent: #21BCFF;      /* color de fons base sol·licitat */
+      --page-accent: #21BCFF;
       --bg-panel: #0f1720;
       --panel-contrast: #0d141a;
-      --card: #0b1116;
+      --panel-backdrop: rgba(3,7,12,0.92);
+      --panel-light-bg: rgba(255,255,255,0.06); /* panell més clar */
+      --panel-light-bg-2: rgba(255,255,255,0.04);
       --muted: #94a3b8;
       --text: #e6eef8;
       --accent: #3b82f6;
@@ -70,31 +72,29 @@
 
     footer{margin-top:14px;color:var(--muted);text-align:center;font-size:13px}
 
-    /* Overlay fons: més opac i amb difuminat per separar clarament del blau */
+    /* Overlay fons: molt opac per separar del fons blau */
     .overlay{
       position:absolute;
       inset:0;
       display:flex;
       align-items:center;
       justify-content:center;
-      background: rgba(3,7,12,0.92); /* molt opac per separar del fons blau */
+      background: var(--panel-backdrop);
       z-index:30;
       border-radius:12px;
-      backdrop-filter: blur(8px); /* desenfoque fort per diferenciar */
+      backdrop-filter: blur(8px);
     }
 
-    /* Panel del menú: fer-lo distingir més del fons del contenidor
-       - fons notablement més clar que el contorn del contenidor
-       - border pronunciat i elevació (sombra) */
+    /* Panel del menú: MÉS CLAR que la finestra que queda darrere */
     .panel{
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border: 1px solid rgba(255,255,255,0.07);
+      background: linear-gradient(180deg, var(--panel-light-bg), var(--panel-light-bg-2));
+      border: 1px solid rgba(255,255,255,0.12); /* borde més visible per separar */
       color:var(--text);
       padding:22px;
       border-radius:14px;
       width:520px;
       max-width:calc(100% - 40px);
-      box-shadow: 0 28px 80px rgba(2,6,23,0.8);
+      box-shadow: 0 32px 90px rgba(2,6,23,0.85); /* ombra més pronunciada */
       text-align:center;
       transform: translateZ(0);
     }
@@ -102,18 +102,18 @@
     .size-options{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:14px 0}
     .size-option{
       padding:10px 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
       border-radius:10px;
-      border: 1px solid rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
       cursor:pointer;
       font-weight:700;
       color:var(--text);
       user-select:none;
     }
     .size-option.selected{
-      outline: 2px solid rgba(59,130,246,0.20);
-      box-shadow: 0 12px 28px rgba(59,130,246,0.10);
-      background: linear-gradient(180deg, rgba(59,130,246,0.08), rgba(255,255,255,0.01));
+      outline: 2px solid rgba(59,130,246,0.22);
+      box-shadow: 0 14px 36px rgba(59,130,246,0.12);
+      background: linear-gradient(180deg, rgba(59,130,246,0.10), rgba(255,255,255,0.02));
     }
 
     .small{ font-size:13px; color:var(--muted) }
@@ -133,8 +133,8 @@
     .btn:active{ transform: translateY(0) scale(.995) }
 
     .btn.ghost{
-      background: rgba(255,255,255,0.02);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.12);
       color: var(--text);
       box-shadow: none;
     }
@@ -183,8 +183,8 @@
         <div class="pause-level" id="pauseLevelText">Nivell 1</div>
         <div class="pause-buttons">
           <button class="btn" id="resumeBtn">Continuar</button>
-          <button class="btn ghost" id="restartSameBtn" style="border-color:rgba(255,255,255,0.08)">Reinicia mateixes</button>
-          <button class="btn ghost" id="toStartBtn" style="border-color:rgba(255,255,255,0.08)">Torna a l'inici</button>
+          <button class="btn ghost" id="restartSameBtn" style="border-color:rgba(255,255,255,0.12)">Reinicia mateixes</button>
+          <button class="btn ghost" id="toStartBtn" style="border-color:rgba(255,255,255,0.12)">Torna a l'inici</button>
         </div>
       </div>
     </div>
