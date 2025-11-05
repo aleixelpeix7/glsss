@@ -2,33 +2,153 @@
 <html lang="ca">
 <head>
   <meta charset="utf-8" />
-  <title>Memoria Visual Pro - Pausa estable</title>
+  <title>Memoria Visual Pro - Tema fosc</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root { --bg1:#ffdede; --bg2:#dff7ff; --panel:rgba(255,255,255,0.95); --gris:#888; }
+    :root{
+      --bg-page: #0b0f14;
+      --bg-panel: #0f1720;
+      --panel-contrast: #11161d;
+      --card: #0b1116;
+      --muted: #94a3b8;
+      --text: #e6eef8;
+      --accent: #3b82f6;
+      --error: #ff5c5c;
+      --success: #34d399;
+      --gris: #344052; /* default square color in dark */
+      --shadow: rgba(0,0,0,0.6);
+      --glass: rgba(255,255,255,0.02);
+    }
+
     html,body{height:100%;margin:0}
-    body{font-family:Arial, Helvetica, sans-serif;background:linear-gradient(135deg,var(--bg1),var(--bg2));display:flex;align-items:center;justify-content:center;min-height:100vh;padding:18px}
-    .container{width:820px;max-width:100%;background:var(--panel);border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.12);position:relative}
-    h1{margin:6px 0 12px;color:#222;text-align:center}
+    body{
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(59,130,246,0.04), transparent),
+                  linear-gradient(180deg,var(--bg-page), #05070a 80%);
+      color:var(--text);
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+      padding:18px;
+    }
+
+    .container{
+      width:820px;
+      max-width:100%;
+      background: linear-gradient(180deg,var(--bg-panel), var(--panel-contrast));
+      border:1px solid rgba(255,255,255,0.03);
+      border-radius:12px;
+      padding:20px;
+      box-shadow: 0 8px 30px var(--shadow);
+      position:relative;
+      overflow:visible;
+    }
+
+    h1{
+      margin:6px 0 12px;
+      color:var(--text);
+      font-weight:700;
+      letter-spacing:0.2px;
+    }
+
     #info{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap}
-    #nivell{font-size:18px}
-    #mensaje{font-size:16px;min-height:22px;color:#333}
+    #nivell{font-size:18px;color:var(--text);font-weight:600}
+    #mensaje{font-size:15px;min-height:22px;color:var(--muted)}
+
     #boardWrap{display:flex;justify-content:center}
     #cuadros{display:grid;grid-gap:12px;margin-top:6px;justify-content:center;align-content:center}
-    .cuadro{width:90px;height:90px;background:var(--gris);border-radius:12px;box-shadow:0 4px 8px rgba(0,0,0,.12);transition:box-shadow .12s,transform .12s,background-color .12s;cursor:pointer;user-select:none}
-    .cuadro:active{transform:scale(.98)}
-    .cuadro.wrong{box-shadow:0 10px 30px rgba(0,0,0,.28) !important}
-    footer{margin-top:14px;color:#666;text-align:center}
-    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:30;border-radius:12px}
-    .panel{background:#fff;padding:22px;border-radius:12px;width:520px;max-width:calc(100% - 40px);box-shadow:0 12px 40px rgba(0,0,0,.28);text-align:center}
+
+    .cuadro{
+      width:90px;
+      height:90px;
+      background: var(--gris);
+      border-radius:12px;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+      transition: box-shadow .12s, transform .12s, background-color .12s;
+      cursor:pointer;
+      user-select:none;
+    }
+    .cuadro:active{ transform: scale(.98) }
+    .cuadro.wrong{
+      box-shadow: 0 14px 36px rgba(0,0,0,0.7) !important;
+    }
+
+    footer{margin-top:14px;color:var(--muted);text-align:center;font-size:13px}
+
+    /* Overlays / panels (same size) */
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(2,6,23,0.6);
+      z-index:30;
+      border-radius:12px;
+    }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.03);
+      color:var(--text);
+      padding:22px;
+      border-radius:12px;
+      width:520px;
+      max-width:calc(100% - 40px);
+      box-shadow: 0 12px 40px rgba(2,6,23,0.7);
+      text-align:center;
+    }
+
     .size-options{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:14px 0}
-    .size-option{padding:10px 14px;background:#f6f7fb;border-radius:10px;border:2px solid transparent;cursor:pointer;font-weight:700}
-    .size-option.selected{border-color:#1e88e5;background:linear-gradient(180deg,#eaf4ff,#fff)}
-    .small{font-size:13px;color:#555}
-    .pause-level{font-size:34px;font-weight:800;margin:6px 0 8px;color:#222}
-    .pause-buttons{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
-    @media (max-width:520px){ .cuadro{width:64px;height:64px} .panel{width:92%;padding:16px} .pause-level{font-size:26px} }
-    .btn{background:#fff;border:2px solid #eee;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600;box-shadow:0 6px 12px rgba(0,0,0,.06)}
+    .size-option{
+      padding:10px 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+      border-radius:10px;
+      border: 1px solid rgba(255,255,255,0.03);
+      cursor:pointer;
+      font-weight:700;
+      color:var(--text);
+      user-select:none;
+    }
+    .size-option.selected{
+      outline: 2px solid rgba(59,130,246,0.18);
+      box-shadow: 0 6px 18px rgba(59,130,246,0.06);
+      background: linear-gradient(180deg, rgba(59,130,246,0.06), rgba(255,255,255,0.01));
+    }
+
+    .small{ font-size:13px; color:var(--muted) }
+
+    .btn{
+      background: linear-gradient(180deg, var(--accent), #2367d9);
+      color: #ffffff;
+      border: none;
+      padding:10px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:700;
+      box-shadow: 0 8px 18px rgba(37,99,235,0.18);
+      transition: transform .08s, box-shadow .12s, opacity .12s;
+    }
+    .btn:hover{ transform: translateY(-2px) }
+    .btn:active{ transform: translateY(0) scale(.995) }
+
+    .btn.ghost{
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.04);
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    .pause-level{ font-size:34px; font-weight:800; margin:6px 0 8px; color:var(--text) }
+    .pause-buttons{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:12px }
+
+    /* small responsive tweaks */
+    @media (max-width:520px){
+      .cuadro{ width:64px; height:64px; border-radius:10px }
+      .panel{ width:92%; padding:16px }
+      .pause-level{ font-size:26px }
+    }
   </style>
 </head>
 <body>
@@ -43,40 +163,40 @@
     <div id="boardWrap"><div id="cuadros" role="grid" aria-label="Tauler de memòria"></div></div>
     <footer>Prem ESC per obrir el menú de pausa</footer>
 
-    <!-- Inici -->
+    <!-- Start overlay -->
     <div class="overlay" id="startOverlay" role="dialog" aria-modal="true" aria-label="Pantalla d'inici">
       <div class="panel">
-        <h2>Començar partida</h2>
-        <p class="small">Tria la mida de la graella i prem <strong>Començar</strong></p>
+        <h2 style="margin:0 0 8px;color:var(--text)">Començar partida</h2>
+        <p class="small">Tria la mida de la graella i prem <strong style="color:var(--text)">Començar</strong></p>
         <div class="size-options" role="radiogroup" aria-label="Mida de la graella">
           <div class="size-option" data-size="4" role="radio" aria-checked="false" tabindex="0">2×2 (4)</div>
           <div class="size-option selected" data-size="9" role="radio" aria-checked="true" tabindex="0">3×3 (9)</div>
           <div class="size-option" data-size="16" role="radio" aria-checked="false" tabindex="0">4×4 (16)</div>
         </div>
         <div style="margin-top:12px"><button class="btn" id="startBtn">Començar</button></div>
-        <p class="small" style="margin-top:12px;color:#666">Pots prémer ESC per pausar durant el joc</p>
+        <p class="small" style="margin-top:12px;color:var(--muted)">Pots prémer ESC per pausar durant el joc</p>
       </div>
     </div>
 
-    <!-- Pausa -->
-    <div class="overlay" id="pauseOverlay" role="dialog" aria-modal="true" aria-label="Pausa" style="display:none">
+    <!-- Pause overlay -->
+    <div class="overlay" id="pauseOverlay" role="dialog" aria-modal="true" aria-label="Pausa" style="display:none;">
       <div class="panel">
-        <h2>Pausa</h2>
+        <h2 style="margin:0 0 8px;color:var(--text)">Pausa</h2>
         <div class="pause-level" id="pauseLevelText">Nivell 1</div>
         <div class="pause-buttons">
           <button class="btn" id="resumeBtn">Continuar</button>
-          <button class="btn" id="restartSameBtn">Reinicia mateixes</button>
-          <button class="btn" id="toStartBtn">Torna a l'inici</button>
+          <button class="btn ghost" id="restartSameBtn" style="border-color:rgba(255,255,255,0.04)">Reinicia mateixes</button>
+          <button class="btn ghost" id="toStartBtn" style="border-color:rgba(255,255,255,0.04)">Torna a l'inici</button>
         </div>
       </div>
     </div>
 
-    <!-- Game over -->
-    <div class="overlay" id="gameOverOverlay" role="dialog" aria-modal="true" aria-label="Has perdut" style="display:none">
+    <!-- Game over overlay -->
+    <div class="overlay" id="gameOverOverlay" role="dialog" aria-modal="true" aria-label="Has perdut" style="display:none;">
       <div class="panel">
-        <h2>Has perdut!</h2>
+        <h2 style="margin:0 0 8px;color:var(--text)">Has perdut!</h2>
         <p class="small">T’has quedat al nivell <strong id="finalLevel">1</strong></p>
-        <p class="small" id="finalSeqInfo" style="margin-top:6px;color:#666"></p>
+        <p class="small" id="finalSeqInfo" style="margin-top:6px;color:var(--muted)"></p>
         <div style="margin-top:12px"><button class="btn" id="retryBtn">Torna a l'inici</button></div>
       </div>
     </div>
@@ -103,7 +223,7 @@
       const finalSeqInfo = document.getElementById('finalSeqInfo');
       const retryBtn = document.getElementById('retryBtn');
 
-      // Estat
+      // State
       let size = 9, cols = 3, baseStep = 3;
       let coloresFijos = [], frecuencias = [];
       let secuencia = [], jugador = [];
@@ -171,17 +291,17 @@
         if(!el) return;
         clearCuadroTimeout(id);
         el.style.backgroundColor = coloresFijos[id];
-        el.style.boxShadow = "0 10px 20px rgba(0,0,0,.25), 0 0 18px " + hexToRgba(coloresFijos[id], .35);
+        el.style.boxShadow = "0 10px 20px rgba(0,0,0,0.45), 0 0 18px " + hexToRgba(coloresFijos[id], .28);
         playTone(frecuencias[id], dur);
-        const t = setTimeout(()=>{ if(el){ el.style.boxShadow="0 4px 8px rgba(0,0,0,.12)"; el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888'; } cuadroTimeouts.delete(id); }, dur);
+        const t = setTimeout(()=>{ if(el){ el.style.boxShadow="0 6px 18px rgba(0,0,0,.45)"; el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#344052'; } cuadroTimeouts.delete(id); }, dur);
         cuadroTimeouts.set(id, t);
       }
       function feedbackLocalCuadro(el,id){
         clearCuadroTimeout(id);
         el.style.backgroundColor = coloresFijos[id];
-        el.style.boxShadow = "0 10px 20px rgba(0,0,0,.25), 0 0 14px "+hexToRgba(coloresFijos[id],.32);
+        el.style.boxShadow = "0 10px 20px rgba(0,0,0,0.45), 0 0 14px "+hexToRgba(coloresFijos[id],.28);
         playTone(frecuencias[id],220);
-        const t = setTimeout(()=>{ el.style.boxShadow="0 4px 8px rgba(0,0,0,.12)"; el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888'; cuadroTimeouts.delete(id); },220);
+        const t = setTimeout(()=>{ if(el){ el.style.boxShadow="0 6px 18px rgba(0,0,0,.45)"; el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#344052'; } cuadroTimeouts.delete(id); },220);
         cuadroTimeouts.set(id,t);
       }
 
@@ -202,7 +322,6 @@
             jugantSequencia = false;
             wasPlayingWhenPaused = false;
             playIndex = 0;
-            // finished: enable input if not paused
             if(!paused){ jugador = []; esperandoInput = true; startInputTimer(); }
             return;
           }
@@ -224,28 +343,22 @@
       function pauseEverything(){
         if(paused) return;
         paused = true;
-        // If currently playing sequence, stop interval but preserve playIndex and flag
         if(seqInterval){
           clearInterval(seqInterval);
           seqInterval = null;
-          // jugantSequencia remains true logically; wasPlayingWhenPaused remembers
           wasPlayingWhenPaused = true;
         } else {
           wasPlayingWhenPaused = false;
         }
-        // if waiting input, stop input timer
         stopInputTimer();
       }
 
       function resumeEverything(){
         if(!paused) return;
         paused = false;
-        // if we were mid-playback, resume from current playIndex
         if(wasPlayingWhenPaused){
-          // small delay to let overlay hide
           setTimeout(()=> startSequencePlayback(playIndex), 80);
         } else {
-          // if we were waiting input before pause, restart input timer
           if(!jugantSequencia && esperandoInput){
             startInputTimer();
           }
@@ -269,7 +382,6 @@
         startOverlay.style.display = 'none';
         pauseOverlay.style.display = 'none';
         gameOverOverlay.style.display = 'none';
-        // primer pas
         secuencia.push(Math.floor(Math.random() * size));
         setTimeout(()=> startSequencePlayback(0), 160);
       }
@@ -303,11 +415,10 @@
         jugador.push(id);
         const idx = jugador.length - 1;
         if(secuencia[idx] !== id){
-          // wrong: visual feedback, then reveal game over after small delay (restore look first)
           clearCuadroTimeout(id);
           el.classList.add('wrong');
           el.style.backgroundColor = coloresFijos[id];
-          el.style.boxShadow = "0 10px 30px rgba(0,0,0,.35), 0 0 20px " + hexToRgba(coloresFijos[id], .4);
+          el.style.boxShadow = "0 12px 34px rgba(0,0,0,.55), 0 0 20px " + hexToRgba(coloresFijos[id], .34);
           playTone(220,350,'sawtooth');
           mensaje.innerText = "❌ Has fallat...";
           esperandoInput = false;
@@ -315,40 +426,36 @@
           setTimeout(()=>{
             clearCuadroTimeout(id);
             el.classList.remove('wrong');
-            el.style.boxShadow = "0 4px 8px rgba(0,0,0,.12)";
-            el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888';
+            el.style.boxShadow = "0 6px 18px rgba(0,0,0,.45)";
+            el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#344052';
             mensaje.innerText = '';
             showGameOver();
           },700);
           return;
         }
-        // correct
         feedbackLocalCuadro(el,id);
         verifyProgress();
       }
 
       function verifyProgress(){
         if(jugador.length === secuencia.length){
-          // level threshold?
           if(secuencia.length >= llindarDeNivell(nivell)){
             const prev = nivell;
             nivell++;
             nivellTexto.innerText = 'Nivell: ' + nivell;
             mensaje.innerText = "🔓 Nivell " + prev + " completat! Comença Nivell " + nivell + ".";
-            // reset sequence for next level (starts with 1)
             secuencia = [];
             jugador = [];
             esperandoInput = false;
             stopSequencePlayback();
             stopInputTimer();
-            setTimeout(()=>{ mensaje.innerText=''; secuencia.push(Math.floor(Math.random()*size)); startSequencePlayback(0); }, 900);
+            setTimeout(()=>{ mensaje.innerText=''; secuencia.push(Math.floor(Math.random()*size)); startSequencePlayback(0); },900);
             return;
           }
-          // else add single step within same level
           mensaje.innerText = "✅ Bé!";
           esperandoInput = false;
           stopInputTimer();
-          setTimeout(()=>{ mensaje.innerText=''; secuencia.push(Math.floor(Math.random()*size)); startSequencePlayback(0); }, 700);
+          setTimeout(()=>{ mensaje.innerText=''; secuencia.push(Math.floor(Math.random()*size)); startSequencePlayback(0); },700);
         } else {
           if(!paused) startInputTimer();
         }
@@ -358,7 +465,6 @@
       function openPause(){
         if(startOverlay.style.display !== 'none' || gameOverOverlay.style.display === 'flex') return;
         if(pauseOverlay.style.display === 'flex') return;
-        // pause immediately (whether mid playback or waiting)
         pauseEverything();
         pauseLevelText.innerText = 'Nivell ' + nivell;
         pauseOverlay.style.display = 'flex';
@@ -415,3 +521,4 @@
   </script>
 </body>
 </html>
+
