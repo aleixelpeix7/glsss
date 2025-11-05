@@ -1,41 +1,34 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
-  <meta charset="UTF-8" />
-  <title>Memoria Visual Pro - Pausa arreglada</title>
+  <meta charset="utf-8" />
+  <title>Memoria Visual Pro - Pausa estable</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root { --bg1:#ffdede; --bg2:#dff7ff; --panel:rgba(255,255,255,0.95); --gris:#888; }
     html,body{height:100%;margin:0}
-    body{
-      font-family:Arial, sans-serif;
-      text-align:center;
-      background:linear-gradient(135deg,var(--bg1),var(--bg2));
-      display:flex;align-items:center;justify-content:center;min-height:100vh;padding:18px;
-    }
-    .container{width:820px;max-width:100%;background:var(--panel);border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,0.12);position:relative;overflow:visible}
-    h1{margin:6px 0 12px;color:#222}
-    .btn{background:#fff;border:2px solid #eee;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600;box-shadow:0 6px 12px rgba(0,0,0,0.06);transition:transform .08s,box-shadow .12s}
-    .btn:active{transform:translateY(1px) scale(.995)}
-    #info{display:flex;gap:20px;align-items:center;justify-content:space-between;margin:10px 0 18px;flex-wrap:wrap}
-    #nivell{font-size:18px;color:#222}
-    #mensaje{font-size:16px;color:#333;min-height:22px}
+    body{font-family:Arial, Helvetica, sans-serif;background:linear-gradient(135deg,var(--bg1),var(--bg2));display:flex;align-items:center;justify-content:center;min-height:100vh;padding:18px}
+    .container{width:820px;max-width:100%;background:var(--panel);border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.12);position:relative}
+    h1{margin:6px 0 12px;color:#222;text-align:center}
+    #info{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+    #nivell{font-size:18px}
+    #mensaje{font-size:16px;min-height:22px;color:#333}
     #boardWrap{display:flex;justify-content:center}
-    #cuadros{display:grid;grid-gap:12px;justify-content:center;align-content:center;margin-top:6px}
-    .cuadro{width:90px;height:90px;background-color:var(--gris);border-radius:12px;cursor:pointer;transition:transform .12s,box-shadow .12s,background-color .12s;box-shadow:0 4px 8px rgba(0,0,0,0.12);user-select:none}
+    #cuadros{display:grid;grid-gap:12px;margin-top:6px;justify-content:center;align-content:center}
+    .cuadro{width:90px;height:90px;background:var(--gris);border-radius:12px;box-shadow:0 4px 8px rgba(0,0,0,.12);transition:box-shadow .12s,transform .12s,background-color .12s;cursor:pointer;user-select:none}
     .cuadro:active{transform:scale(.98)}
-    .cuadro.wrong{box-shadow:0 10px 30px rgba(0,0,0,0.28) !important;transform:scale(.99)}
-    .visually-hidden{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
-    footer{margin-top:14px;color:#666;font-size:13px}
-    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:30;border-radius:12px}
-    .start-panel{background:#fff;padding:22px;border-radius:12px;width:520px;max-width:calc(100% - 40px);box-shadow:0 12px 40px rgba(0,0,0,0.28);text-align:center}
-    .size-options{display:flex;justify-content:center;gap:12px;margin:14px 0;flex-wrap:wrap}
-    .size-option{padding:10px 14px;background:#f6f7fb;border-radius:10px;border:2px solid transparent;cursor:pointer;font-weight:700;user-select:none}
+    .cuadro.wrong{box-shadow:0 10px 30px rgba(0,0,0,.28) !important}
+    footer{margin-top:14px;color:#666;text-align:center}
+    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:30;border-radius:12px}
+    .panel{background:#fff;padding:22px;border-radius:12px;width:520px;max-width:calc(100% - 40px);box-shadow:0 12px 40px rgba(0,0,0,.28);text-align:center}
+    .size-options{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:14px 0}
+    .size-option{padding:10px 14px;background:#f6f7fb;border-radius:10px;border:2px solid transparent;cursor:pointer;font-weight:700}
     .size-option.selected{border-color:#1e88e5;background:linear-gradient(180deg,#eaf4ff,#fff)}
     .small{font-size:13px;color:#555}
     .pause-level{font-size:34px;font-weight:800;margin:6px 0 8px;color:#222}
-    .pause-buttons{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap}
-    @media (max-width:520px){ .cuadro{width:64px;height:64px;border-radius:10px} .start-panel{width:92%;padding:16px} .pause-level{font-size:26px} }
+    .pause-buttons{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+    @media (max-width:520px){ .cuadro{width:64px;height:64px} .panel{width:92%;padding:16px} .pause-level{font-size:26px} }
+    .btn{background:#fff;border:2px solid #eee;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600;box-shadow:0 6px 12px rgba(0,0,0,.06)}
   </style>
 </head>
 <body>
@@ -44,17 +37,15 @@
 
     <div id="info">
       <div id="nivell">Nivell: 1</div>
-      <div id="status"><span id="mensaje" role="status" aria-live="polite"></span></div>
+      <div id="mensaje" role="status" aria-live="polite"></div>
     </div>
 
     <div id="boardWrap"><div id="cuadros" role="grid" aria-label="Tauler de memòria"></div></div>
-
-    <div class="visually-hidden" id="instruccio">Repeteix la seqüència de colors amb clics o toc.</div>
     <footer>Prem ESC per obrir el menú de pausa</footer>
 
-    <!-- start overlay -->
+    <!-- Inici -->
     <div class="overlay" id="startOverlay" role="dialog" aria-modal="true" aria-label="Pantalla d'inici">
-      <div class="start-panel">
+      <div class="panel">
         <h2>Començar partida</h2>
         <p class="small">Tria la mida de la graella i prem <strong>Començar</strong></p>
         <div class="size-options" role="radiogroup" aria-label="Mida de la graella">
@@ -62,14 +53,14 @@
           <div class="size-option selected" data-size="9" role="radio" aria-checked="true" tabindex="0">3×3 (9)</div>
           <div class="size-option" data-size="16" role="radio" aria-checked="false" tabindex="0">4×4 (16)</div>
         </div>
-        <div style="margin-top:12px;"><button class="btn" id="startBtn">Començar</button></div>
+        <div style="margin-top:12px"><button class="btn" id="startBtn">Començar</button></div>
         <p class="small" style="margin-top:12px;color:#666">Pots prémer ESC per pausar durant el joc</p>
       </div>
     </div>
 
-    <!-- pause overlay -->
-    <div class="overlay" id="pauseOverlay" role="dialog" aria-modal="true" aria-label="Pausa" style="display:none;">
-      <div class="start-panel">
+    <!-- Pausa -->
+    <div class="overlay" id="pauseOverlay" role="dialog" aria-modal="true" aria-label="Pausa" style="display:none">
+      <div class="panel">
         <h2>Pausa</h2>
         <div class="pause-level" id="pauseLevelText">Nivell 1</div>
         <div class="pause-buttons">
@@ -80,24 +71,23 @@
       </div>
     </div>
 
-    <!-- game over overlay -->
-    <div class="overlay" id="gameOverOverlay" role="dialog" aria-modal="true" aria-label="Has perdut" style="display:none;">
-      <div class="start-panel">
+    <!-- Game over -->
+    <div class="overlay" id="gameOverOverlay" role="dialog" aria-modal="true" aria-label="Has perdut" style="display:none">
+      <div class="panel">
         <h2>Has perdut!</h2>
         <p class="small">T’has quedat al nivell <strong id="finalLevel">1</strong></p>
         <p class="small" id="finalSeqInfo" style="margin-top:6px;color:#666"></p>
-        <div style="margin-top:12px;"><button class="btn" id="retryBtn">Torna a l'inici</button></div>
+        <div style="margin-top:12px"><button class="btn" id="retryBtn">Torna a l'inici</button></div>
       </div>
     </div>
-
   </div>
 
   <script>
     window.onload = function () {
       // Elements
       const startOverlay = document.getElementById('startOverlay');
-      const startBtn = document.getElementById('startBtn');
       const sizeOptions = document.querySelectorAll('.size-option');
+      const startBtn = document.getElementById('startBtn');
       const cuadrosContainer = document.getElementById('cuadros');
       const mensaje = document.getElementById('mensaje');
       const nivellTexto = document.getElementById('nivell');
@@ -113,212 +103,186 @@
       const finalSeqInfo = document.getElementById('finalSeqInfo');
       const retryBtn = document.getElementById('retryBtn');
 
-      // State
-      let size = 9, cols = 3, coloresFijos = [], frecuencias = [], baseStep = 3;
-      let secuencia = [], jugador = [], nivell = 1;
-      let esperandoInput = false, jugantSequencia = false, paused = false;
-      const tiempoMaximo = 3500;
-      let tiempoLimite = null;
+      // Estat
+      let size = 9, cols = 3, baseStep = 3;
+      let coloresFijos = [], frecuencias = [];
+      let secuencia = [], jugador = [];
+      let nivell = 1;
+      let esperandoInput = false;
+      let paused = false;
 
-      // Playback control
-      let seqIntervalId = null;       // interval id for playback
-      let playIndex = 0;              // next index to play
+      // Timers / playback control
+      const TIEMPO_MAX = 3500;
+      let inputTimer = null;
+      let seqInterval = null;
+      let playIndex = 0;
       let wasPlayingWhenPaused = false;
 
-      // timeouts per button
       const cuadroTimeouts = new Map();
 
       // Audio
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       let audioCtx = null;
-      function ensureAudioContext(){ if(!audioCtx) audioCtx = new AudioContext(); }
-      function playTone(freq,dur=300,type='sine'){
-        ensureAudioContext();
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = type; osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.14, now+0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, now+dur/1000);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(now); osc.stop(now + dur/1000 + 0.02);
-      }
+      function ensureAudioCtx(){ if(!audioCtx) audioCtx = new AudioContext(); }
+      function playTone(freq,duration=300,type='sine'){ ensureAudioCtx(); const now=audioCtx.currentTime; const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.setValueAtTime(0,now); g.gain.linearRampToValueAtTime(0.14,now+0.01); g.gain.exponentialRampToValueAtTime(0.001,now+duration/1000); o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now+duration/1000+0.02); }
 
-      // util helpers
-      function hexToRgba(hex,alpha){ const h=hex.replace('#',''); const r=parseInt(h.substring(0,2),16); const g=parseInt(h.substring(2,4),16); const b=parseInt(h.substring(4,6),16); return 'rgba('+r+','+g+','+b+','+alpha+')' }
-      function hslToHex(h,s,l){ s/=100; l/=100; const k=n=> (n + h/30) % 12; const a=s*Math.min(l,1-l); const f=n=>{ const color = l - a * Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n),1))); return Math.round(255*color).toString(16).padStart(2,'0') }; return `#${f(0)}${f(8)}${f(4)}` }
-      function generarColors(n){ const baseHue=[0,200,120,38,270,330,180,230,28,15,260,300,45,80,160,210]; const colors=[]; for(let i=0;i<n;i++){ const hue=baseHue[i%baseHue.length]; colors.push(hslToHex((hue + (i*13))%360,75,50)); } return colors; }
-      function generarFrecuencias(n){ const base=[440,494,523.25,587.33,659.25,740,830,880,987.77,1108.73,1244.51,1318.51,1479.98,1568,1760,1975.53]; const frecs=[]; for(let i=0;i<n;i++) frecs.push(base[i%base.length]); return frecs; }
-
+      // Utils color/freq
+      function hexToRgba(hex,a){ const h=hex.replace('#',''); const r=parseInt(h.slice(0,2),16); const g=parseInt(h.slice(2,4),16); const b=parseInt(h.slice(4,6),16); return `rgba(${r},${g},${b},${a})`; }
+      function hslToHex(h,s,l){ s/=100; l/=100; const k=n=> (n + h/30) % 12; const a=s*Math.min(l,1-l); const f=n=>{ const color = l - a * Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n),1))); return Math.round(255*color).toString(16).padStart(2,'0'); }; return `#${f(0)}${f(8)}${f(4)}`; }
+      function generarColors(n){ const base=[0,200,120,38,270,330,180,230,28,15,260,300,45,80,160,210]; const out=[]; for(let i=0;i<n;i++){ const hue=base[i%base.length]; out.push(hslToHex((hue + i*13)%360,75,50)); } return out; }
+      function generarFrecuencias(n){ const base=[440,494,523.25,587.33,659.25,740,830,880,987.77,1108.73,1244.51,1318.51,1479.98,1568,1760,1975.53]; return Array.from({length:n},(_,i)=>base[i%base.length]); }
       function llindarDeNivell(n){ return n * baseStep; }
 
-      // setup board
+      // Build grid
       function setupBoard(n){
         size = n;
-        if(n===4) cols=2; else if(n===9) cols=3; else cols=4;
-        if(n===4) baseStep=2; else if(n===9) baseStep=3; else baseStep=4;
+        if(size===4) cols=2; else if(size===9) cols=3; else cols=4;
+        baseStep = (size===4?2: size===9?3:4);
         coloresFijos = generarColors(size);
         frecuencias = generarFrecuencias(size);
         cuadrosContainer.innerHTML = '';
         cuadrosContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         for(let i=0;i<size;i++){
-          const cuadro = document.createElement('div');
-          cuadro.classList.add('cuadro');
-          cuadro.setAttribute('data-id', i);
-          cuadro.setAttribute('role','button');
-          cuadro.setAttribute('aria-label','Quadrat '+(i+1));
-          cuadro.tabIndex = 0;
-          cuadrosContainer.appendChild(cuadro);
+          const d = document.createElement('div');
+          d.className = 'cuadro';
+          d.setAttribute('data-id', i);
+          d.setAttribute('role','button');
+          d.setAttribute('aria-label','Quadrat '+(i+1));
+          d.tabIndex = 0;
+          cuadrosContainer.appendChild(d);
         }
         attachListeners();
       }
 
       function attachListeners(){
-        const cuadros = document.querySelectorAll('.cuadro');
-        cuadros.forEach(cuadro=>{
-          cuadro.removeEventListener('click', onCuadroClick);
-          cuadro.addEventListener('click', onCuadroClick);
-          cuadro.removeEventListener('keydown', onCuadroKey);
-          cuadro.addEventListener('keydown', onCuadroKey);
+        const nodes = document.querySelectorAll('.cuadro');
+        nodes.forEach(n=>{
+          n.removeEventListener('click', onCuadroClick);
+          n.addEventListener('click', onCuadroClick);
+          n.removeEventListener('keydown', onCuadroKey);
+          n.addEventListener('keydown', onCuadroKey);
         });
       }
-      function onCuadroKey(e){ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); e.currentTarget.click(); } }
+      function onCuadroKey(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.currentTarget.click(); } }
 
-      // clear per-button timeout
-      function clearCuadroTimeout(id){
-        if(cuadroTimeouts.has(id)){ clearTimeout(cuadroTimeouts.get(id)); cuadroTimeouts.delete(id); }
-      }
-
+      function clearCuadroTimeout(id){ if(cuadroTimeouts.has(id)){ clearTimeout(cuadroTimeouts.get(id)); cuadroTimeouts.delete(id); } }
       function iluminarCuadro(id,dur=300){
-        const cuadro = document.querySelector(`.cuadro[data-id="${id}"]`);
-        if(!cuadro) return;
+        const el = document.querySelector(`.cuadro[data-id="${id}"]`);
+        if(!el) return;
         clearCuadroTimeout(id);
-        cuadro.style.backgroundColor = coloresFijos[id];
-        cuadro.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 18px "+hexToRgba(coloresFijos[id],0.35);
+        el.style.backgroundColor = coloresFijos[id];
+        el.style.boxShadow = "0 10px 20px rgba(0,0,0,.25), 0 0 18px " + hexToRgba(coloresFijos[id], .35);
         playTone(frecuencias[id], dur);
-        const t = setTimeout(()=>{ if(cuadro){ cuadro.style.boxShadow="0 4px 8px rgba(0,0,0,0.12)"; cuadro.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888'; } cuadroTimeouts.delete(id); }, dur);
-        cuadroTimeouts.set(id,t);
+        const t = setTimeout(()=>{ if(el){ el.style.boxShadow="0 4px 8px rgba(0,0,0,.12)"; el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888'; } cuadroTimeouts.delete(id); }, dur);
+        cuadroTimeouts.set(id, t);
       }
-
-      function feedbackLocalCuadro(cuadroEl,id){
+      function feedbackLocalCuadro(el,id){
         clearCuadroTimeout(id);
-        cuadroEl.style.backgroundColor = coloresFijos[id];
-        cuadroEl.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25), 0 0 14px "+hexToRgba(coloresFijos[id],0.32);
+        el.style.backgroundColor = coloresFijos[id];
+        el.style.boxShadow = "0 10px 20px rgba(0,0,0,.25), 0 0 14px "+hexToRgba(coloresFijos[id],.32);
         playTone(frecuencias[id],220);
-        const t = setTimeout(()=>{ cuadroEl.style.boxShadow="0 4px 8px rgba(0,0,0,0.12)"; cuadroEl.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888'; cuadroTimeouts.delete(id); }, 220);
+        const t = setTimeout(()=>{ el.style.boxShadow="0 4px 8px rgba(0,0,0,.12)"; el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888'; cuadroTimeouts.delete(id); },220);
         cuadroTimeouts.set(id,t);
       }
 
-      // Playback functions with pause support
-      function startSequencePlayback(fromIndex=0){
-        // ensure previous cleared
+      // Playback with safe pausing/resuming
+      function startSequencePlayback(fromIndex = 0){
         stopSequencePlayback();
-        playIndex = fromIndex;
+        if(!Array.isArray(secuencia) || secuencia.length === 0) { jugantSequencia = false; return; }
+        playIndex = Math.max(0, fromIndex);
         jugantSequencia = true;
         wasPlayingWhenPaused = true;
-        seqIntervalId = setInterval(()=>{
+        // play immediate first flash, then interval for rest
+        iluminarCuadro(secuencia[playIndex]);
+        playIndex++;
+        seqInterval = setInterval(()=>{
+          if(paused){ stopSequencePlayback(); return; }
           if(playIndex >= secuencia.length){
             stopSequencePlayback();
-            // finished playback
             jugantSequencia = false;
             wasPlayingWhenPaused = false;
             playIndex = 0;
-            if(!paused){
-              jugador = [];
-              esperandoInput = true;
-              startInputTimer();
-            }
+            // finished: enable input if not paused
+            if(!paused){ jugador = []; esperandoInput = true; startInputTimer(); }
             return;
           }
-          const id = secuencia[playIndex];
-          iluminarCuadro(id, 300);
+          iluminarCuadro(secuencia[playIndex]);
           playIndex++;
-        }, 550); // timing between flashes
+        }, 550);
       }
 
       function stopSequencePlayback(){
-        if(seqIntervalId !== null){
-          clearInterval(seqIntervalId);
-          seqIntervalId = null;
-        }
+        if(seqInterval){ clearInterval(seqInterval); seqInterval = null; }
       }
 
+      function startInputTimer(){
+        clearTimeout(inputTimer);
+        inputTimer = setTimeout(()=>{ handleTimeoutLoss(); }, TIEMPO_MAX);
+      }
+      function stopInputTimer(){ clearTimeout(inputTimer); inputTimer = null; }
+
       function pauseEverything(){
-        // called when opening pause
+        if(paused) return;
         paused = true;
-        // stop playback interval but keep playIndex so we can resume
-        if(seqIntervalId !== null){
-          clearInterval(seqIntervalId);
-          seqIntervalId = null;
-          // jugantSequencia stays true if we were playing; remember with wasPlayingWhenPaused
+        // If currently playing sequence, stop interval but preserve playIndex and flag
+        if(seqInterval){
+          clearInterval(seqInterval);
+          seqInterval = null;
+          // jugantSequencia remains true logically; wasPlayingWhenPaused remembers
           wasPlayingWhenPaused = true;
         } else {
           wasPlayingWhenPaused = false;
         }
-        // stop input timer
-        clearTimeout(tiempoLimite);
+        // if waiting input, stop input timer
+        stopInputTimer();
       }
 
       function resumeEverything(){
+        if(!paused) return;
         paused = false;
-        // if we were in playback when paused, resume playback from playIndex
+        // if we were mid-playback, resume from current playIndex
         if(wasPlayingWhenPaused){
-          // small timeout to let overlay hide visually
+          // small delay to let overlay hide
           setTimeout(()=> startSequencePlayback(playIndex), 80);
         } else {
-          // if not playback and we were waiting input, restart timer
+          // if we were waiting input before pause, restart input timer
           if(!jugantSequencia && esperandoInput){
             startInputTimer();
           }
         }
+        wasPlayingWhenPaused = false;
       }
 
-      // input timer
-      function startInputTimer(){
-        clearTimeout(tiempoLimite);
-        tiempoLimite = setTimeout(()=>{ handleTimeoutLoss(); }, tiempoMaximo);
-      }
-
-      function stopInputTimer(){
-        clearTimeout(tiempoLimite);
-      }
-
-      // Game flow
+      // Game logic
       function iniciarJoc(){
         secuencia = [];
         jugador = [];
         nivell = 1;
-        nivellTexto.innerText = 'Nivell: '+nivell;
+        nivellTexto.innerText = 'Nivell: ' + nivell;
         mensaje.innerText = '';
         esperandoInput = false;
-        jugantSequencia = false;
         paused = false;
-        playIndex = 0;
-        wasPlayingWhenPaused = false;
         stopSequencePlayback();
         stopInputTimer();
+        playIndex = 0;
+        wasPlayingWhenPaused = false;
         startOverlay.style.display = 'none';
         pauseOverlay.style.display = 'none';
         gameOverOverlay.style.display = 'none';
-        // iniciar amb 1 pas
-        secuencia.push(Math.floor(Math.random()*size));
-        // start playback
-        setTimeout(()=> startSequencePlayback(0), 180);
+        // primer pas
+        secuencia.push(Math.floor(Math.random() * size));
+        setTimeout(()=> startSequencePlayback(0), 160);
       }
 
       function addOneAndPlay(){
         jugador = [];
         esperandoInput = false;
-        // append a single step then play
-        secuencia.push(Math.floor(Math.random()*size));
-        playIndex = 0;
-        startSequencePlayback(0);
+        secuencia.push(Math.floor(Math.random() * size));
+        setTimeout(()=> startSequencePlayback(0), 80);
       }
 
       function handleTimeoutLoss(){
         if(paused) return;
-        // show message then gameover overlay
         esperandoInput = false;
         mensaje.innerText = "⏱️ Has trigat massa...";
         setTimeout(()=>{ mensaje.innerText=''; showGameOver(); }, 700);
@@ -326,26 +290,24 @@
 
       function showGameOver(){
         finalLevelEl.innerText = nivell;
-        finalSeqInfo.innerText = 'Longitud de la seqüència: '+secuencia.length;
+        finalSeqInfo.innerText = 'Longitud de la seqüència: ' + secuencia.length;
         gameOverOverlay.style.display = 'flex';
       }
 
-      // click handler
       function onCuadroClick(e){
-        ensureAudioContext();
-        if(jugantSequencia || paused || !esperandoInput) return;
+        if(paused) return;
+        if(jugantSequencia || !esperandoInput) return;
         stopInputTimer();
-        const id = parseInt(e.currentTarget.getAttribute('data-id'));
+        const el = e.currentTarget;
+        const id = parseInt(el.getAttribute('data-id'));
         jugador.push(id);
         const idx = jugador.length - 1;
-        // incorrect?
         if(secuencia[idx] !== id){
-          // highlight wrong, message, then show game over after delay (restore look first)
+          // wrong: visual feedback, then reveal game over after small delay (restore look first)
           clearCuadroTimeout(id);
-          const el = e.currentTarget;
           el.classList.add('wrong');
           el.style.backgroundColor = coloresFijos[id];
-          el.style.boxShadow = "0 10px 30px rgba(0,0,0,0.35), 0 0 20px "+hexToRgba(coloresFijos[id],0.4);
+          el.style.boxShadow = "0 10px 30px rgba(0,0,0,.35), 0 0 20px " + hexToRgba(coloresFijos[id], .4);
           playTone(220,350,'sawtooth');
           mensaje.innerText = "❌ Has fallat...";
           esperandoInput = false;
@@ -353,7 +315,7 @@
           setTimeout(()=>{
             clearCuadroTimeout(id);
             el.classList.remove('wrong');
-            el.style.boxShadow = "0 4px 8px rgba(0,0,0,0.12)";
+            el.style.boxShadow = "0 4px 8px rgba(0,0,0,.12)";
             el.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--gris').trim() || '#888';
             mensaje.innerText = '';
             showGameOver();
@@ -361,58 +323,44 @@
           return;
         }
         // correct
-        feedbackLocalCuadro(e.currentTarget, id);
-        // continue verifying
+        feedbackLocalCuadro(el,id);
         verifyProgress();
       }
 
       function verifyProgress(){
-        // if completed sequence
         if(jugador.length === secuencia.length){
           // level threshold?
           if(secuencia.length >= llindarDeNivell(nivell)){
             const prev = nivell;
             nivell++;
-            nivellTexto.innerText = 'Nivell: '+nivell;
-            mensaje.innerText = "🔓 Nivell "+prev+" completat! Comença Nivell "+nivell+".";
-            // reset sequence to start new level with 1 step
+            nivellTexto.innerText = 'Nivell: ' + nivell;
+            mensaje.innerText = "🔓 Nivell " + prev + " completat! Comença Nivell " + nivell + ".";
+            // reset sequence for next level (starts with 1)
             secuencia = [];
             jugador = [];
             esperandoInput = false;
-            jugantSequencia = false;
             stopSequencePlayback();
             stopInputTimer();
-            setTimeout(()=>{
-              mensaje.innerText = '';
-              secuencia.push(Math.floor(Math.random()*size));
-              startSequencePlayback(0);
-            },900);
+            setTimeout(()=>{ mensaje.innerText=''; secuencia.push(Math.floor(Math.random()*size)); startSequencePlayback(0); }, 900);
             return;
           }
-          // else add one and continue within level
+          // else add single step within same level
           mensaje.innerText = "✅ Bé!";
           esperandoInput = false;
-          jugantSequencia = false;
           stopInputTimer();
-          setTimeout(()=>{
-            mensaje.innerText = '';
-            secuencia.push(Math.floor(Math.random()*size));
-            startSequencePlayback(0);
-          },700);
+          setTimeout(()=>{ mensaje.innerText=''; secuencia.push(Math.floor(Math.random()*size)); startSequencePlayback(0); }, 700);
         } else {
-          // still waiting for more clicks
           if(!paused) startInputTimer();
         }
       }
 
-      // pause handling
+      // Pause/open/close handling
       function openPause(){
         if(startOverlay.style.display !== 'none' || gameOverOverlay.style.display === 'flex') return;
-        // if already paused, ignore
         if(pauseOverlay.style.display === 'flex') return;
-        // pause everything now
+        // pause immediately (whether mid playback or waiting)
         pauseEverything();
-        pauseLevelText.innerText = 'Nivell '+nivell;
+        pauseLevelText.innerText = 'Nivell ' + nivell;
         pauseOverlay.style.display = 'flex';
       }
 
@@ -422,76 +370,44 @@
         resumeEverything();
       }
 
-      document.addEventListener('keydown', e=>{
+      document.addEventListener('keydown', (e)=>{
         if(e.key === 'Escape'){
-          // if start overlay visible, ESC does nothing
           if(startOverlay.style.display !== 'none') return;
-          // if game over visible, ESC ignored
           if(gameOverOverlay.style.display === 'flex') return;
           if(pauseOverlay.style.display === 'flex') closePause(); else openPause();
         }
       });
 
-      resumeBtn.addEventListener('click', ()=> closePause());
+      resumeBtn.addEventListener('click', closePause);
+      restartSameBtn.addEventListener('click', ()=>{ pauseOverlay.style.display='none'; paused=false; iniciarJoc(); });
+      toStartBtn.addEventListener('click', ()=>{ pauseOverlay.style.display='none'; paused=false; startOverlay.style.display='flex'; });
 
-      restartSameBtn.addEventListener('click', ()=>{
-        // restart same grid: close pause and init game
-        pauseOverlay.style.display = 'none';
-        paused = false;
-        iniciarJoc();
-      });
-
-      toStartBtn.addEventListener('click', ()=>{
-        pauseOverlay.style.display = 'none';
-        paused = false;
-        // show start overlay (keeps selected size)
-        startOverlay.style.display = 'flex';
-      });
-
-      // start overlay interactions
+      // overlay interactions
       sizeOptions.forEach(opt=>{
         opt.addEventListener('click', ()=>{
           sizeOptions.forEach(o=>{ o.classList.remove('selected'); o.setAttribute('aria-checked','false'); });
           opt.classList.add('selected'); opt.setAttribute('aria-checked','true');
           size = parseInt(opt.getAttribute('data-size'));
         });
-        opt.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); opt.click(); }});
+        opt.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); opt.click(); } });
       });
+      startBtn.addEventListener('click', ()=>{ setupBoard(size); startOverlay.style.display='none'; iniciarJoc(); });
 
-      startBtn.addEventListener('click', ()=> { setupBoardAndStart(size); });
+      retryBtn.addEventListener('click', ()=>{ gameOverOverlay.style.display='none'; startOverlay.style.display='flex'; });
 
-      retryBtn.addEventListener('click', ()=>{
-        gameOverOverlay.style.display = 'none';
-        startOverlay.style.display = 'flex';
-      });
-
-      function setupBoardAndStart(n){
-        setupBoard(n);
-        startOverlay.style.display = 'none';
-        iniciarJoc();
-      }
-
-      function setupBoard(n){ // build grid without starting game
+      function setupBoard(n){
         size = n;
-        if(n===4) cols=2; else if(n===9) cols=3; else cols=4;
-        if(n===4) baseStep=2; else if(n===9) baseStep=3; else baseStep=4;
+        if(size===4) cols=2; else if(size===9) cols=3; else cols=4;
+        baseStep = (size===4?2: size===9?3:4);
         coloresFijos = generarColors(size);
         frecuencias = generarFrecuencias(size);
         cuadrosContainer.innerHTML = '';
         cuadrosContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        for(let i=0;i<size;i++){
-          const cuadro = document.createElement('div');
-          cuadro.classList.add('cuadro');
-          cuadro.setAttribute('data-id', i);
-          cuadro.setAttribute('role','button');
-          cuadro.setAttribute('aria-label','Quadrat '+(i+1));
-          cuadro.tabIndex = 0;
-          cuadrosContainer.appendChild(cuadro);
-        }
+        for(let i=0;i<size;i++){ const d=document.createElement('div'); d.className='cuadro'; d.setAttribute('data-id',i); d.setAttribute('role','button'); d.setAttribute('aria-label','Quadrat '+(i+1)); d.tabIndex=0; cuadrosContainer.appendChild(d); }
         attachListeners();
       }
 
-      // initial setup
+      // init defaults
       setupBoard(9);
       startOverlay.style.display = 'flex';
       mensaje.innerText = 'Tria la mida i prem Començar';
