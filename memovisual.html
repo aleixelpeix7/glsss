@@ -2,13 +2,13 @@
 <html lang="ca">
 <head>
   <meta charset="utf-8" />
-  <title>Memoria Visual Pro - Menús més opacs</title>
+  <title>Memoria Visual Pro - Tema fosc amb fons blau</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root{
-      --bg-page: #0b0f14;
+      --page-accent: #21BCFF;      /* color de fons base sol·licitat */
       --bg-panel: #0f1720;
-      --panel-contrast: #11161d;
+      --panel-contrast: #0d141a;
       --card: #0b1116;
       --muted: #94a3b8;
       --text: #e6eef8;
@@ -21,8 +21,9 @@
 
     html,body{height:100%;margin:0}
     body{
-      background: radial-gradient(1200px 600px at 10% 10%, rgba(59,130,246,0.04), transparent),
-                  linear-gradient(180deg,var(--bg-page), #05070a 80%);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
+        var(--page-accent);
       color:var(--text);
       font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
       display:flex;
@@ -32,19 +33,20 @@
       padding:18px;
     }
 
+    /* contenidor central */
     .container{
       width:820px;
       max-width:100%;
       background: linear-gradient(180deg,var(--bg-panel), var(--panel-contrast));
-      border:1px solid rgba(255,255,255,0.03);
       border-radius:12px;
       padding:20px;
-      box-shadow: 0 8px 30px var(--shadow);
+      box-shadow: 0 14px 40px rgba(2,6,23,0.6);
       position:relative;
       overflow:visible;
+      border: 1px solid rgba(255,255,255,0.03);
     }
 
-    h1{ margin:6px 0 12px; color:var(--text); font-weight:700; letter-spacing:0.2px; }
+    h1{ margin:6px 0 12px; color:var(--text); font-weight:700; letter-spacing:0.2px; text-align:center }
 
     #info{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap}
     #nivell{font-size:18px;color:var(--text);font-weight:600}
@@ -68,31 +70,33 @@
 
     footer{margin-top:14px;color:var(--muted);text-align:center;font-size:13px}
 
-    /* Overlays més opacs:
-       augmentem l'opacitat del fons i fem els panells menys translúcids */
+    /* Overlay fons: més opac i amb difuminat per separar clarament del blau */
     .overlay{
       position:absolute;
       inset:0;
       display:flex;
       align-items:center;
       justify-content:center;
-      background: rgba(2,6,23,0.88); /* més opac que abans */
+      background: rgba(3,7,12,0.92); /* molt opac per separar del fons blau */
       z-index:30;
       border-radius:12px;
-      backdrop-filter: blur(6px); /* lleu desenfoc per ressaltar el panell */
+      backdrop-filter: blur(8px); /* desenfoque fort per diferenciar */
     }
 
+    /* Panel del menú: fer-lo distingir més del fons del contenidor
+       - fons notablement més clar que el contorn del contenidor
+       - border pronunciat i elevació (sombra) */
     .panel{
-      /* menys translúcid: augmentem la densitat del color de fons */
-      background: linear-gradient(180deg, rgba(10,14,20,0.98), rgba(10,14,20,0.96));
-      border: 1px solid rgba(255,255,255,0.05);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.07);
       color:var(--text);
       padding:22px;
-      border-radius:12px;
+      border-radius:14px;
       width:520px;
       max-width:calc(100% - 40px);
-      box-shadow: 0 18px 50px rgba(0,0,0,0.7);
+      box-shadow: 0 28px 80px rgba(2,6,23,0.8);
       text-align:center;
+      transform: translateZ(0);
     }
 
     .size-options{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:14px 0}
@@ -100,16 +104,16 @@
       padding:10px 14px;
       background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
       border-radius:10px;
-      border: 1px solid rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.04);
       cursor:pointer;
       font-weight:700;
       color:var(--text);
       user-select:none;
     }
     .size-option.selected{
-      outline: 2px solid rgba(59,130,246,0.18);
-      box-shadow: 0 8px 22px rgba(59,130,246,0.07);
-      background: linear-gradient(180deg, rgba(59,130,246,0.06), rgba(255,255,255,0.01));
+      outline: 2px solid rgba(59,130,246,0.20);
+      box-shadow: 0 12px 28px rgba(59,130,246,0.10);
+      background: linear-gradient(180deg, rgba(59,130,246,0.08), rgba(255,255,255,0.01));
     }
 
     .small{ font-size:13px; color:var(--muted) }
@@ -122,7 +126,7 @@
       border-radius:10px;
       cursor:pointer;
       font-weight:700;
-      box-shadow: 0 8px 18px rgba(37,99,235,0.18);
+      box-shadow: 0 12px 28px rgba(37,99,235,0.16);
       transition: transform .08s, box-shadow .12s, opacity .12s;
     }
     .btn:hover{ transform: translateY(-2px) }
@@ -130,7 +134,7 @@
 
     .btn.ghost{
       background: rgba(255,255,255,0.02);
-      border: 1px solid rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
       color: var(--text);
       box-shadow: none;
     }
@@ -179,8 +183,8 @@
         <div class="pause-level" id="pauseLevelText">Nivell 1</div>
         <div class="pause-buttons">
           <button class="btn" id="resumeBtn">Continuar</button>
-          <button class="btn ghost" id="restartSameBtn" style="border-color:rgba(255,255,255,0.06)">Reinicia mateixes</button>
-          <button class="btn ghost" id="toStartBtn" style="border-color:rgba(255,255,255,0.06)">Torna a l'inici</button>
+          <button class="btn ghost" id="restartSameBtn" style="border-color:rgba(255,255,255,0.08)">Reinicia mateixes</button>
+          <button class="btn ghost" id="toStartBtn" style="border-color:rgba(255,255,255,0.08)">Torna a l'inici</button>
         </div>
       </div>
     </div>
