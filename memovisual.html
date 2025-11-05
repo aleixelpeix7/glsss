@@ -2,21 +2,16 @@
 <html lang="ca">
 <head>
   <meta charset="utf-8" />
-  <title>Memoria Visual Pro - Panells més clars</title>
+  <title>Memoria Visual Pro - Overlays selectius</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root{
       --page-accent: #21BCFF;
       --bg-panel: #0f1720;
       --panel-contrast: #0d141a;
-      --panel-backdrop: rgba(3,7,12,0.92);
-      --panel-light-bg: rgba(255,255,255,0.06); /* panell més clar */
-      --panel-light-bg-2: rgba(255,255,255,0.04);
       --muted: #94a3b8;
       --text: #e6eef8;
       --accent: #3b82f6;
-      --error: #ff5c5c;
-      --success: #34d399;
       --gris: #344052;
       --shadow: rgba(0,0,0,0.6);
     }
@@ -72,33 +67,81 @@
 
     footer{margin-top:14px;color:var(--muted);text-align:center;font-size:13px}
 
-    /* Overlay fons: molt opac per separar del fons blau */
-    .overlay{
+    /* -------------------
+       Overlays i panels
+       ------------------- */
+
+    /* START overlay: completament opac, no deixa veure la graella */
+    #startOverlay{
       position:absolute;
       inset:0;
       display:flex;
       align-items:center;
       justify-content:center;
-      background: var(--panel-backdrop);
-      z-index:30;
+      background: rgba(2,6,23,0.96); /* molt opac: tapa el fons i la graella */
+      z-index:40;
       border-radius:12px;
-      backdrop-filter: blur(8px);
     }
-
-    /* Panel del menú: MÉS CLAR que la finestra que queda darrere */
-    .panel{
-      background: linear-gradient(180deg, var(--panel-light-bg), var(--panel-light-bg-2));
-      border: 1px solid rgba(255,255,255,0.12); /* borde més visible per separar */
-      color:var(--text);
+    #startOverlay .panel{
+      background: #ffffff; /* panell clar (per contrast) */
+      color: #0b1220;
       padding:22px;
       border-radius:14px;
       width:520px;
       max-width:calc(100% - 40px);
-      box-shadow: 0 32px 90px rgba(2,6,23,0.85); /* ombra més pronunciada */
+      box-shadow: 0 28px 80px rgba(2,6,23,0.3);
       text-align:center;
-      transform: translateZ(0);
     }
 
+    /* PAUSE overlay: semitransparent, deixa veure el container darrere */
+    #pauseOverlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(3,7,12,0.60); /* semitransparent */
+      z-index:35;
+      border-radius:12px;
+      backdrop-filter: blur(4px);
+    }
+    #pauseOverlay .panel{
+      background: rgba(255,255,255,0.06); /* panel clar però translúcid */
+      border: 1px solid rgba(255,255,255,0.10);
+      color: var(--text);
+      padding:22px;
+      border-radius:14px;
+      width:520px;
+      max-width:calc(100% - 40px);
+      box-shadow: 0 20px 60px rgba(2,6,23,0.6);
+      text-align:center;
+    }
+
+    /* GAMEOVER overlay: semitransparent igual que pausa */
+    #gameOverOverlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(3,7,12,0.60);
+      z-index:35;
+      border-radius:12px;
+      backdrop-filter: blur(4px);
+    }
+    #gameOverOverlay .panel{
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: var(--text);
+      padding:22px;
+      border-radius:14px;
+      width:520px;
+      max-width:calc(100% - 40px);
+      box-shadow: 0 20px 60px rgba(2,6,23,0.6);
+      text-align:center;
+    }
+
+    /* Estils genèrics dels panells (pots reutilitzar classes) */
     .size-options{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:14px 0}
     .size-option{
       padding:10px 14px;
@@ -129,9 +172,6 @@
       box-shadow: 0 12px 28px rgba(37,99,235,0.16);
       transition: transform .08s, box-shadow .12s, opacity .12s;
     }
-    .btn:hover{ transform: translateY(-2px) }
-    .btn:active{ transform: translateY(0) scale(.995) }
-
     .btn.ghost{
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.12);
@@ -161,36 +201,36 @@
     <div id="boardWrap"><div id="cuadros" role="grid" aria-label="Tauler de memòria"></div></div>
     <footer>Prem ESC per obrir el menú de pausa</footer>
 
-    <!-- Start overlay -->
-    <div class="overlay" id="startOverlay" role="dialog" aria-modal="true" aria-label="Pantalla d'inici">
+    <!-- START overlay (OPAC: no es veu res del darrere) -->
+    <div id="startOverlay" role="dialog" aria-modal="true" aria-label="Pantalla d'inici">
       <div class="panel">
-        <h2 style="margin:0 0 8px;color:var(--text)">Començar partida</h2>
-        <p class="small">Tria la mida de la graella i prem <strong style="color:var(--text)">Començar</strong></p>
+        <h2 style="margin:0 0 8px;color:#0b1220">Començar partida</h2>
+        <p class="small" style="color:#0b1220">Tria la mida de la graella i prem <strong>Començar</strong></p>
         <div class="size-options" role="radiogroup" aria-label="Mida de la graella">
           <div class="size-option" data-size="4" role="radio" aria-checked="false" tabindex="0">2×2 (4)</div>
           <div class="size-option selected" data-size="9" role="radio" aria-checked="true" tabindex="0">3×3 (9)</div>
           <div class="size-option" data-size="16" role="radio" aria-checked="false" tabindex="0">4×4 (16)</div>
         </div>
         <div style="margin-top:12px"><button class="btn" id="startBtn">Començar</button></div>
-        <p class="small" style="margin-top:12px;color:var(--muted)">Pots prémer ESC per pausar durant el joc</p>
+        <p class="small" style="margin-top:12px;color:#0b1220">Pots prémer ESC per pausar durant el joc</p>
       </div>
     </div>
 
-    <!-- Pause overlay -->
-    <div class="overlay" id="pauseOverlay" role="dialog" aria-modal="true" aria-label="Pausa" style="display:none;">
+    <!-- PAUSE overlay (SEMITRANSPARENT: es veu la graella rere) -->
+    <div id="pauseOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Pausa">
       <div class="panel">
         <h2 style="margin:0 0 8px;color:var(--text)">Pausa</h2>
         <div class="pause-level" id="pauseLevelText">Nivell 1</div>
         <div class="pause-buttons">
           <button class="btn" id="resumeBtn">Continuar</button>
-          <button class="btn ghost" id="restartSameBtn" style="border-color:rgba(255,255,255,0.12)">Reinicia mateixes</button>
-          <button class="btn ghost" id="toStartBtn" style="border-color:rgba(255,255,255,0.12)">Torna a l'inici</button>
+          <button class="btn ghost" id="restartSameBtn">Reinicia mateixes</button>
+          <button class="btn ghost" id="toStartBtn">Torna a l'inici</button>
         </div>
       </div>
     </div>
 
-    <!-- Game over overlay -->
-    <div class="overlay" id="gameOverOverlay" role="dialog" aria-modal="true" aria-label="Has perdut" style="display:none;">
+    <!-- GAME OVER overlay (SEMITRANSPARENT: es veu la graella rere) -->
+    <div id="gameOverOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Has perdut">
       <div class="panel">
         <h2 style="margin:0 0 8px;color:var(--text)">Has perdut!</h2>
         <p class="small">T’has quedat al nivell <strong id="finalLevel">1</strong></p>
@@ -198,6 +238,7 @@
         <div style="margin-top:12px"><button class="btn" id="retryBtn">Torna a l'inici</button></div>
       </div>
     </div>
+
   </div>
 
   <script>
