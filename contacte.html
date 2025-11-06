@@ -5,8 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Contacte</title>
   <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: #21BCFF;
+      color: #111827;
+      overflow-y: auto;
+    }
+
     .enllac-inici {
-      position: absolute;
+      position: fixed;
       top: 20px;
       left: 20px;
       font-size: 20px;
@@ -20,17 +30,11 @@
       color: #FF637E;
     }
 
-    body {
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    .container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      margin: 0;
-      background: #21BCFF;
-      color: #111827;
-      padding-top: 80px;
+      padding: 100px 20px 40px;
     }
 
     .card {
@@ -39,7 +43,7 @@
       border-radius: 10px;
       box-shadow: 0 6px 22px rgba(16,24,40,0.08);
       max-width: 640px;
-      width: 92%;
+      width: 100%;
       text-align: center;
       margin-bottom: 40px;
     }
@@ -72,29 +76,30 @@
     }
 
     iframe {
+      width: 100%;
+      max-width: 640px;
+      height: 1000px;
       border: none;
-      width: 640px;
-      max-width: 92%;
-      height: 732px;
     }
   </style>
 </head>
 <body>
   <a class="enllac-inici" href="https://glsss.netlify.app">inicio</a>
+  <div class="container">
+    <div class="card" role="main">
+      <p class="message">
+        Si vols informar d'un bug o vols fer alguna proposta envia un correu <strong>aquí</strong><br>
+        o respon a aquest formulari
+      </p>
+      <a class="mail-link" href="https://mail.google.com/mail/?view=cm&fs=1&to=aleixelpeix7%40gmail.com&authuser=0" target="_blank" rel="noopener noreferrer">
+        Envia un correu
+      </a>
+      <small>Obrirà la finestra de composició de Gmail si hi has iniciat sessió</small>
+    </div>
 
-  <div class="card" role="main">
-    <p class="message">
-      Si vols informar d'un bug o vols fer alguna proposta envia un correu <strong>aquí</strong><br>
-      o respon a aquest formulari
-    </p>
-    <a class="mail-link" href="https://mail.google.com/mail/?view=cm&fs=1&to=aleixelpeix7%40gmail.com&authuser=0" target="_blank" rel="noopener noreferrer">
-      Envia un correu
-    </a>
-    <small>Obrirà la finestra de composició de Gmail si hi has iniciat sessió</small>
+    <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSelarphzAukcqiRl6lY9OqWb_v6B9YBa11mdbwQUAF72_-IUg/viewform?embedded=true">
+      S'està carregant…
+    </iframe>
   </div>
-
-  <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSelarphzAukcqiRl6lY9OqWb_v6B9YBa11mdbwQUAF72_-IUg/viewform?embedded=true" marginheight="0" marginwidth="0">S'està carregant…</iframe>
 </body>
 </html>
-
-
