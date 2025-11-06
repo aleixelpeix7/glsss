@@ -2,25 +2,49 @@
 <html lang="ca">
 <head>
   <meta charset="UTF-8">
-  <title>Inicio|GLS</title>
+  <title>Inicio | GLS</title>
   <style>
-   .enllac-contacte {
-  font-size: 20px;
-  color: #FF2056;
-  text-decoration: underline;
-  font-weight: bold;
-  z-index: 1000;
-}
+    /* HEADER FIX */
+    .capcalera {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 40px;
+      background: none;
+      z-index: 1000;
+      pointer-events: none;
+    }
 
-.enllac-contacte:hover {
-  color: #FF637E;
-}
+    .capcalera img,
+    .capcalera .enllac-contacte {
+      pointer-events: auto;
+    }
+
+    .logo {
+      height: 160px;
+    }
+
+    .enllac-contacte {
+      font-size: 20px;
+      color: #FF2056;
+      text-decoration: underline;
+      font-weight: bold;
+      z-index: 1000;
+    }
+
+    .enllac-contacte:hover {
+      color: #FF637E;
+    }
 
     body {
       background-color: #21BCFF;
       font-family: Arial, sans-serif;
       color: #FDC745;
-      padding: 50px;
+      padding: 220px 50px 50px 50px; /* espai superior per no tapar contingut */
     }
 
     h1 {
@@ -41,18 +65,25 @@
   </style>
 </head>
 <body>
-<header style="position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background: none; z-index: 1000;">
-  <img src="assets/logo.png" alt="Logo del web" style="height: 140px;">
-  <a class="enllac-contacte" href="https://glsss.netlify.app/contacte">contactar</a>
-</header>
-   <h1>Generador de insultos:</h1>
+
+  <!-- HEADER -->
+  <header class="capcalera">
+    <img src="assets/logo.png" alt="Logo del web" class="logo">
+    <a class="enllac-contacte" href="https://glsss.netlify.app/contacte">contactar</a>
+  </header>
+
+  <!-- CONTINGUT -->
+  <h1>Generador de insultos:</h1>
   <a class="enllac" href="https://glsss.netlify.app/insultitos">insultitos</a>
+
   <h1>Juego de la Serpiente:</h1>
-<a class="enllac" href="https://glsss.netlify.app/serpiente">serpiente</a>
+  <a class="enllac" href="https://glsss.netlify.app/serpiente">serpiente</a>
+
   <h1>¿Quieres hacer clic?:</h1>
-<a class="enllac" href="https://glsss.netlify.app/clicador">clicador</a>
-    <h1>Juego de memoria visual:</h1>
-<a class="enllac" href="https://glsss.netlify.app/memovisual">Memo-visual</a>
+  <a class="enllac" href="https://glsss.netlify.app/clicador">clicador</a>
+
+  <h1>Juego de memoria visual:</h1>
+  <a class="enllac" href="https://glsss.netlify.app/memovisual">Memo-visual</a>
 
 </body>
 </html>
