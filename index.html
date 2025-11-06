@@ -16,12 +16,7 @@
       padding: 10px 40px;
       background: none;
       z-index: 1000;
-      pointer-events: none;
-    }
-
-    .capcalera img,
-    .capcalera .enllac-contacte {
-      pointer-events: auto;
+      box-sizing: border-box;
     }
 
     .logo {
@@ -33,7 +28,6 @@
       color: #FF2056;
       text-decoration: underline;
       font-weight: bold;
-      z-index: 1000;
     }
 
     .enllac-contacte:hover {
@@ -44,7 +38,12 @@
       background-color: #21BCFF;
       font-family: Arial, sans-serif;
       color: #FDC745;
-      padding: 220px 50px 50px 50px; /* espai superior per no tapar contingut */
+      margin: 0;
+      padding-top: 180px; /* espai per no tapar el contingut */
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-bottom: 50px;
+      box-sizing: border-box;
     }
 
     h1 {
