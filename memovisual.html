@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
   <meta charset="utf-8" />
-  <title>Memoria Visual Pro - Overlays selectius</title>
+  <title>Memoria Visual Pro - Overlays ajustats</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root{
@@ -30,7 +30,6 @@
       padding:18px;
     }
 
-    /* contenidor central */
     .container{
       width:820px;
       max-width:100%;
@@ -68,95 +67,74 @@
     footer{margin-top:14px;color:var(--muted);text-align:center;font-size:13px}
 
     /* -------------------
-       Overlays i panels
+       START overlay: opac com a la versió anterior (panel que tapa el fons)
        ------------------- */
-
-    /* START overlay: completament opac, no deixa veure la graella */
     #startOverlay{
       position:absolute;
       inset:0;
       display:flex;
       align-items:center;
       justify-content:center;
-      background: rgba(2,6,23,0.96); /* molt opac: tapa el fons i la graella */
+      background: rgba(2,6,23,0.96);
       z-index:40;
       border-radius:12px;
     }
     #startOverlay .panel{
-      background: #ffffff; /* panell clar (per contrast) */
-      color: #0b1220;
-      padding:22px;
-      border-radius:14px;
-      width:520px;
-      max-width:calc(100% - 40px);
-      box-shadow: 0 28px 80px rgba(2,6,23,0.3);
-      text-align:center;
-    }
-
-    /* PAUSE overlay: semitransparent, deixa veure el container darrere */
-    #pauseOverlay{
-      position:absolute;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background: rgba(3,7,12,0.60); /* semitransparent */
-      z-index:35;
-      border-radius:12px;
-      backdrop-filter: blur(4px);
-    }
-    #pauseOverlay .panel{
-      background: rgba(255,255,255,0.06); /* panel clar però translúcid */
-      border: 1px solid rgba(255,255,255,0.10);
+      /* mantinc l'estil fosc, no blanc */
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.08);
       color: var(--text);
       padding:22px;
       border-radius:14px;
       width:520px;
       max-width:calc(100% - 40px);
-      box-shadow: 0 20px 60px rgba(2,6,23,0.6);
+      box-shadow: 0 28px 80px rgba(2,6,23,0.85);
       text-align:center;
     }
 
-    /* GAMEOVER overlay: semitransparent igual que pausa */
-    #gameOverOverlay{
+    /* -------------------
+       PAUSE & GAMEOVER overlays:
+       - fons semitransparent (deixa veure el que hi ha darrere)
+       - PANEL OPAC (no translúcid): contrasta i no deixa veure la graella dins el panel
+       ------------------- */
+    #pauseOverlay, #gameOverOverlay{
       position:absolute;
       inset:0;
       display:flex;
       align-items:center;
       justify-content:center;
-      background: rgba(3,7,12,0.60);
+      background: rgba(3,7,12,0.60); /* semitransparent: deixa veure la graella darrere */
       z-index:35;
       border-radius:12px;
       backdrop-filter: blur(4px);
     }
-    #gameOverOverlay .panel{
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.10);
+    #pauseOverlay .panel, #gameOverOverlay .panel{
+      background: linear-gradient(180deg, #0b1220, #0d1418); /* PANEL OPAC (fosc i dens) */
+      border: 1px solid rgba(255,255,255,0.06);
       color: var(--text);
       padding:22px;
       border-radius:14px;
       width:520px;
       max-width:calc(100% - 40px);
-      box-shadow: 0 20px 60px rgba(2,6,23,0.6);
+      box-shadow: 0 22px 64px rgba(2,6,23,0.7);
       text-align:center;
     }
 
-    /* Estils genèrics dels panells (pots reutilitzar classes) */
     .size-options{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:14px 0}
     .size-option{
       padding:10px 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
       border-radius:10px;
-      border: 1px solid rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.04);
       cursor:pointer;
       font-weight:700;
       color:var(--text);
       user-select:none;
     }
     .size-option.selected{
-      outline: 2px solid rgba(59,130,246,0.22);
-      box-shadow: 0 14px 36px rgba(59,130,246,0.12);
-      background: linear-gradient(180deg, rgba(59,130,246,0.10), rgba(255,255,255,0.02));
+      outline: 2px solid rgba(59,130,246,0.20);
+      box-shadow: 0 12px 28px rgba(59,130,246,0.08);
+      background: linear-gradient(180deg, rgba(59,130,246,0.06), rgba(255,255,255,0.01));
     }
 
     .small{ font-size:13px; color:var(--muted) }
@@ -172,9 +150,12 @@
       box-shadow: 0 12px 28px rgba(37,99,235,0.16);
       transition: transform .08s, box-shadow .12s, opacity .12s;
     }
+    .btn:hover{ transform: translateY(-2px) }
+    .btn:active{ transform: translateY(0) scale(.995) }
+
     .btn.ghost{
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
       color: var(--text);
       box-shadow: none;
     }
@@ -201,22 +182,22 @@
     <div id="boardWrap"><div id="cuadros" role="grid" aria-label="Tauler de memòria"></div></div>
     <footer>Prem ESC per obrir el menú de pausa</footer>
 
-    <!-- START overlay (OPAC: no es veu res del darrere) -->
+    <!-- START overlay (OPAC) -->
     <div id="startOverlay" role="dialog" aria-modal="true" aria-label="Pantalla d'inici">
       <div class="panel">
-        <h2 style="margin:0 0 8px;color:#0b1220">Començar partida</h2>
-        <p class="small" style="color:#0b1220">Tria la mida de la graella i prem <strong>Començar</strong></p>
+        <h2 style="margin:0 0 8px;color:var(--text)">Començar partida</h2>
+        <p class="small" style="color:var(--muted)">Tria la mida de la graella i prem <strong style="color:var(--text)">Començar</strong></p>
         <div class="size-options" role="radiogroup" aria-label="Mida de la graella">
           <div class="size-option" data-size="4" role="radio" aria-checked="false" tabindex="0">2×2 (4)</div>
           <div class="size-option selected" data-size="9" role="radio" aria-checked="true" tabindex="0">3×3 (9)</div>
           <div class="size-option" data-size="16" role="radio" aria-checked="false" tabindex="0">4×4 (16)</div>
         </div>
         <div style="margin-top:12px"><button class="btn" id="startBtn">Començar</button></div>
-        <p class="small" style="margin-top:12px;color:#0b1220">Pots prémer ESC per pausar durant el joc</p>
+        <p class="small" style="margin-top:12px;color:var(--muted)">Pots prémer ESC per pausar durant el joc</p>
       </div>
     </div>
 
-    <!-- PAUSE overlay (SEMITRANSPARENT: es veu la graella rere) -->
+    <!-- PAUSE overlay (fons semitransparent, panel OPAC) -->
     <div id="pauseOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Pausa">
       <div class="panel">
         <h2 style="margin:0 0 8px;color:var(--text)">Pausa</h2>
@@ -229,7 +210,7 @@
       </div>
     </div>
 
-    <!-- GAME OVER overlay (SEMITRANSPARENT: es veu la graella rere) -->
+    <!-- GAME OVER overlay (fons semitransparent, panel OPAC) -->
     <div id="gameOverOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Has perdut">
       <div class="panel">
         <h2 style="margin:0 0 8px;color:var(--text)">Has perdut!</h2>
@@ -238,7 +219,6 @@
         <div style="margin-top:12px"><button class="btn" id="retryBtn">Torna a l'inici</button></div>
       </div>
     </div>
-
   </div>
 
   <script>
@@ -547,7 +527,15 @@
         frecuencias = generarFrecuencias(size);
         cuadrosContainer.innerHTML = '';
         cuadrosContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        for(let i=0;i<size;i++){ const d=document.createElement('div'); d.className='cuadro'; d.setAttribute('data-id',i); d.setAttribute('role','button'); d.setAttribute('aria-label','Quadrat '+(i+1)); d.tabIndex=0; cuadrosContainer.appendChild(d); }
+        for(let i=0;i<size;i++){
+          const d = document.createElement('div');
+          d.className = 'cuadro';
+          d.setAttribute('data-id', i);
+          d.setAttribute('role','button');
+          d.setAttribute('aria-label','Quadrat '+(i+1));
+          d.tabIndex = 0;
+          cuadrosContainer.appendChild(d);
+        }
         attachListeners();
       }
 
