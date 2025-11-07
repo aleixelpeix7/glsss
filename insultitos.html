@@ -16,55 +16,69 @@
     }
 
     /* 🔝 Barra de navegació igual que index.html */
-    nav {
-      background-color: rgba(0, 0, 0, 0.7);
-      padding: 1rem 2rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
+   nav {
+  background-color: rgba(0, 0, 0, 0.7);
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+  padding: 1rem 2rem;
+  box-sizing: border-box;
+}
 
-    nav ul {
-      list-style: none;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 0;
-      padding: 0;
-    }
+nav ul {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+}
 
-    nav li.logo {
-      display: flex;
-      align-items: center;
-    }
+nav li.logo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
 
-    nav li.logo a {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-    }
+nav li.logo a {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
 
-    nav li.logo img {
-      height: 60px;
-      margin-right: 0.5rem;
-      vertical-align: middle;
-    }
+nav li.logo img {
+  height: 60px;
+  vertical-align: middle;
+}
 
-    nav li.enllacos {
-      display: flex;
-      gap: 2rem;
-    }
+nav .inici-enllac a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.3s;
+  font-size: 1rem;
+}
 
-    nav a {
-      color: white;
-      text-decoration: none;
-      font-weight: bold;
-      transition: color 0.3s;
-    }
+nav .inici-enllac a:hover {
+  color: #ffff66;
+}
 
-    nav a:hover {
-      color: #ffff66;
-    }
+nav li.enllacos {
+  display: flex;
+  gap: 2rem;
+}
+
+nav li.enllacos a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+
+nav li.enllacos a:hover {
+  color: #ffff66;
+}
 
     h1 {
       color: #FFDF20;
@@ -96,19 +110,20 @@
 <body>
 
   <!-- 🔝 Barra de navegació -->
-  <nav>
-    <ul>
-      <li class="logo">
-        <a href="https://glsss.netlify.app">
-          <img src="assets/logo.png" alt="Logo GLS" />
-        </a>
-      </li>
-      <li class="enllacos">
-        <a href="https://glsss.netlify.app">Inici</a>
-        <a href="https://glsss.netlify.app/contacte">Contactar</a>
-      </li>
-    </ul>
-  </nav>
+ <nav>
+  <ul>
+    <li class="logo">
+      <a href="https://glsss.netlify.app">
+        <img src="assets/logo.png" alt="Logo GLS" />
+        <span class="inici-enllac"><a href="https://glsss.netlify.app">Inici</a></span>
+      </a>
+    </li>
+    <li class="enllacos">
+      <a href="https://glsss.netlify.app/contacte">Contactar</a>
+    </li>
+  </ul>
+</nav>
+
 
   <!-- 🎮 Contingut principal -->
   <h1>¡Insultitos para tii!</h1>
