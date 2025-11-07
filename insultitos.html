@@ -41,43 +41,26 @@ nav li.logo {
   gap: 1rem;
 }
 
-nav li.logo a {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-}
-
 nav li.logo img {
   height: 60px;
   vertical-align: middle;
 }
 
-nav .inici-enllac a {
+.nav-enllac {
   color: white;
   text-decoration: none;
   font-weight: bold;
-  transition: color 0.3s;
   font-size: 1rem;
+  transition: color 0.3s;
 }
 
-nav .inici-enllac a:hover {
+.nav-enllac:hover {
   color: #ffff66;
 }
 
 nav li.enllacos {
   display: flex;
   gap: 2rem;
-}
-
-nav li.enllacos a {
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-  transition: color 0.3s;
-}
-
-nav li.enllacos a:hover {
-  color: #ffff66;
 }
 
     h1 {
@@ -110,19 +93,20 @@ nav li.enllacos a:hover {
 <body>
 
   <!-- 🔝 Barra de navegació -->
- <nav>
+<nav>
   <ul>
     <li class="logo">
       <a href="https://glsss.netlify.app">
         <img src="assets/logo.png" alt="Logo GLS" />
-        <span class="inici-enllac"><a href="https://glsss.netlify.app">Inici</a></span>
       </a>
+      <a class="nav-enllac" href="https://glsss.netlify.app">Inici</a>
     </li>
     <li class="enllacos">
-      <a href="https://glsss.netlify.app/contacte">Contactar</a>
+      <a class="nav-enllac" href="https://glsss.netlify.app/contacte">Contactar</a>
     </li>
   </ul>
 </nav>
+
 
 
   <!-- 🎮 Contingut principal -->
