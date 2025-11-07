@@ -17,54 +17,53 @@
 
     /* 🔝 Barra de navegació igual que index.html */
    nav {
-  background-color: rgba(0, 0, 0, 0.7);
-  position: sticky;
-  top: 0;
-  width: 100%;
-  z-index: 100;
-  padding: 1rem 2rem;
-  box-sizing: border-box;
-}
+    background-color: rgba(0, 0, 0, 0.7);
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 100;
+    padding: 1rem 2rem;
+  }
 
-nav ul {
-  list-style: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 0;
-  padding: 0;
-}
+  nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
 
-nav li.logo {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
+  nav li.logo {
+    display: flex;
+    align-items: center;
+  }
 
-nav li.logo img {
-  height: 60px;
-  vertical-align: middle;
-}
+  nav li.logo a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
 
-.nav-enllac {
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-  font-size: 1rem;
-  transition: color 0.3s;
-}
+  nav li.logo img {
+    height: 60px;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
 
-.nav-enllac:hover {
-  color: #ffff66;
-}
+  nav li.enllacos {
+    display: flex;
+    gap: 2rem;
+  }
 
-nav li.enllacos {
-  display: flex;
-  gap: 2rem;
-}
-    .inici-ajustada {
-  margin-left: 1rem; /* ajusta la separació respecte del logo */
-}
+  nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s;
+  }
+
+  nav a:hover {
+    color: #ffff66;
+  }
 
     h1 {
       color: #FFDF20;
@@ -102,10 +101,10 @@ nav li.enllacos {
       <a href="https://glsss.netlify.app">
         <img src="assets/logo.png" alt="Logo GLS" />
       </a>
-      <a class="nav-enllac" href="https://glsss.netlify.app">Inici</a>
     </li>
     <li class="enllacos">
-      <a class="nav-enllac" href="https://glsss.netlify.app/contacte">Contactar</a>
+      <a href="https://glsss.netlify.app">Inici</a>
+      <a href="https://glsss.netlify.app/contacte">Contactar</a>
     </li>
   </ul>
 </nav>
