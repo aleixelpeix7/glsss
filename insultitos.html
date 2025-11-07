@@ -2,17 +2,27 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" href="assets/favicon.png" type="image/png" />
   <title>Insultitos | GLS</title>
+  <link rel="icon" href="assets/favicon.png" type="image/png" />
   <style>
-   nav {
-  background-color: rgba(0, 0, 0, 0.7);
-  padding: 1rem 0.5rem 1rem 1rem; /* menys padding esquerre */
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
+    body {
+      background-color: #21BCFF;
+      font-family: 'Comic Sans MS', cursive;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      color: #FDC745;
+    }
 
+    /* 🔝 Barra de navegació igual que index.html */
+    nav {
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
 
     nav ul {
       list-style: none;
@@ -40,29 +50,26 @@
       vertical-align: middle;
     }
 
+    nav li.enllacos {
+      display: flex;
+      gap: 2rem;
+    }
+
     nav a {
       color: white;
       text-decoration: none;
       font-weight: bold;
       transition: color 0.3s;
-      margin-left: 2rem;
     }
 
     nav a:hover {
       color: #ffff66;
     }
 
-    body {
-      background-color: #21BCFF;
-      font-family: 'Comic Sans MS', cursive;
-      text-align: center;
-      margin: 0;
-      padding-top: 0;
-    }
-
     h1 {
       color: #FFDF20;
-      margin-top: 2rem;
+      font-size: 28px;
+      margin: 30px 0 10px 0;
     }
 
     #insulto {
@@ -96,7 +103,7 @@
           <img src="assets/logo.png" alt="Logo GLS" />
         </a>
       </li>
-      <li>
+      <li class="enllacos">
         <a href="https://glsss.netlify.app">Inici</a>
         <a href="https://glsss.netlify.app/contacte">Contactar</a>
       </li>
