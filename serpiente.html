@@ -4,6 +4,59 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Juego de la serpiente|GLS</title>
+  <link rel="icon" href="assets/favicon.png" type="image/png" />
+<style>
+  nav {
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 1rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  nav li.logo {
+    display: flex;
+    align-items: center;
+  }
+
+  nav li.logo a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+
+  nav li.logo img {
+    height: 60px;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+
+  nav li.enllacos {
+    display: flex;
+    gap: 2rem;
+  }
+
+  nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s;
+  }
+
+  nav a:hover {
+    color: #ffff66;
+  }
+</style>
+
   <style>
     .enllac-inici {
   position: absolute;
@@ -66,6 +119,19 @@
 <body>
   <h1>🐍 Juego de la serpiente</h1>
   <a class="enllac-inici" href="https://glsss.netlify.app">inicio</a>
+<nav>
+  <ul>
+    <li class="logo">
+      <a href="https://glsss.netlify.app">
+        <img src="assets/logo.png" alt="Logo GLS" />
+      </a>
+    </li>
+    <li class="enllacos">
+      <a href="https://glsss.netlify.app">Inici</a>
+      <a href="https://glsss.netlify.app/contacte">Contactar</a>
+    </li>
+  </ul>
+</nav>
 
   <div id="gameWrap">
     <canvas id="gameCanvas" width="400" height="400"></canvas>
