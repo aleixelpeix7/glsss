@@ -1,70 +1,75 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <link rel="icon" href="assets/favicon.png" type="image/png" />
-  <title>Insultitos|GLS</title>
+  <title>Insultitos | GLS</title>
   <style>
     nav {
-    background-color: rgba(0, 0, 0, 0.7);
-    padding: 1rem 2rem;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
 
-  nav ul {
-    list-style: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 0;
-    padding: 0;
-  }
+    nav ul {
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+    }
 
-  nav li.logo {
-    display: flex;
-    align-items: center;
-  }
+    nav li.logo {
+      display: flex;
+      align-items: center;
+    }
 
-  nav li.logo a {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-  }
+    nav li.logo a {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+    }
 
-  nav li.logo img {
-    height: 60px;
-    margin-right: 0.5rem;
-    vertical-align: middle;
-  }
+    nav li.logo img {
+      height: 60px;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
 
-  nav a {
-    color: white;
-    text-decoration: none;
-    font-weight: bold;
-    transition: color 0.3s;
-    margin-left: 2rem;
-  }
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      transition: color 0.3s;
+      margin-left: 2rem;
+    }
 
-  nav a:hover {
-    color: #ffff66;
-  }
+    nav a:hover {
+      color: #ffff66;
+    }
 
     body {
-      background-color:#21BCFF;
+      background-color: #21BCFF;
       font-family: 'Comic Sans MS', cursive;
       text-align: center;
-      padding-top: 100px;
+      margin: 0;
+      padding-top: 0;
     }
+
     h1 {
       color: #FFDF20;
+      margin-top: 2rem;
     }
+
     #insulto {
       font-size: 24px;
       margin-top: 30px;
       color: #FB2C36;
     }
+
     button {
       padding: 15px 30px;
       font-size: 18px;
@@ -74,26 +79,30 @@
       cursor: pointer;
       color: white;
     }
+
     button:hover {
       background-color: #BBF451;
     }
   </style>
-   <nav>
-  <ul>
-    <li class="logo">
-      <a href="https://glsss.netlify.app">
-        <img src="assets/logo.png" alt="Logo GLS" />
-      </a>
-    </li>
-    <li>
-      <a href="https://glsss.netlify.app">Inici</a>
-      <a href="https://glsss.netlify.app/contacte">Contactar</a>
-    </li>
-  </ul>
-</nav>
-
-</head> 
+</head>
 <body>
+
+  <!-- 🔝 Barra de navegació -->
+  <nav>
+    <ul>
+      <li class="logo">
+        <a href="https://glsss.netlify.app">
+          <img src="assets/logo.png" alt="Logo GLS" />
+        </a>
+      </li>
+      <li>
+        <a href="https://glsss.netlify.app">Inici</a>
+        <a href="https://glsss.netlify.app/contacte">Contactar</a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- 🎮 Contingut principal -->
   <h1>¡Insultitos para tii!</h1>
   <button onclick="lanzarInsulto()">Dame un insulto</button>
   <div id="insulto"></div>
@@ -132,7 +141,6 @@
       document.getElementById("insulto").innerText = insultos[aleatorio];
     }
   </script>
+
 </body>
-
 </html>
-
