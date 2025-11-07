@@ -3,49 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <title>Inicio | GLS</title>
+  <link rel="icon" href="assets/logo.png" type="image/png" />
   <style>
-    /* HEADER ULTRA COMPACTE */
-    .capcalera {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 0;
-      margin: 0;
-      background: none;
-      box-sizing: border-box;
-    }
-
-    .logo {
-      height: 160px;
-      margin: 0;
-      padding: 0;
-      display: block;
-    }
-
-    .enllac-contacte {
-      font-size: 20px;
-      color: #FF2056;
-      text-decoration: underline;
-      font-weight: bold;
-      margin: 50px 20px 0 0; /* lleugerament més avall i separació lateral */
-    }
-
-    .enllac-contacte:hover {
-      color: #FF637E;
-    }
-
     body {
       background-color: #21BCFF;
       font-family: Arial, sans-serif;
       color: #FDC745;
       margin: 0;
-      padding: 0 50px 50px 50px;
+      padding: 0;
       box-sizing: border-box;
+    }
+
+    /* 🔝 Barra de navegació estil Aleix El Peix */
+    nav {
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    nav li.logo {
+      display: flex;
+      align-items: center;
+    }
+
+    nav li.logo a {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+    }
+
+    nav li.logo img {
+      height: 60px;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+
+    nav li.logo span {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: white;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      transition: color 0.3s;
+    }
+
+    nav a:hover {
+      color: #ffff66;
     }
 
     h1 {
       font-size: 28px;
-      margin: 20px 0 10px 0;
+      margin: 30px 0 10px 0;
     }
 
     .enllac {
@@ -58,28 +81,41 @@
     .enllac:hover {
       color: #FFDF20;
     }
+
+    main {
+      padding: 2rem;
+    }
   </style>
 </head>
 <body>
 
-  <!-- CAPÇALERA -->
-  <header class="capcalera">
-    <img src="assets/logo.png" alt="Logo del web" class="logo">
-    <a class="enllac-contacte" href="https://glsss.netlify.app/contacte">contactar</a>
-  </header>
+  <!-- 🔝 Barra de navegació -->
+  <nav>
+    <ul>
+      <li class="logo">
+        <a href="index.html">
+          <img src="assets/logo.png" alt="Logo GLS" />
+          <span>LAG</span>
+        </a>
+      </li>
+      <li><a href="https://glsss.netlify.app/contacte">contactar</a></li>
+    </ul>
+  </nav>
 
-  <!-- CONTINGUT -->
-  <h1>Generador de insultos:</h1>
-  <a class="enllac" href="https://glsss.netlify.app/insultitos">insultitos</a>
+  <!-- 🎮 Contingut principal -->
+  <main>
+    <h1>Generador de insultos:</h1>
+    <a class="enllac" href="https://glsss.netlify.app/insultitos">insultitos</a>
 
-  <h1>Juego de la Serpiente:</h1>
-  <a class="enllac" href="https://glsss.netlify.app/serpiente">serpiente</a>
+    <h1>Juego de la Serpiente:</h1>
+    <a class="enllac" href="https://glsss.netlify.app/serpiente">serpiente</a>
 
-  <h1>¿Quieres hacer clic?:</h1>
-  <a class="enllac" href="https://glsss.netlify.app/clicador">clicador</a>
+    <h1>¿Quieres hacer clic?:</h1>
+    <a class="enllac" href="https://glsss.netlify.app/clicador">clicador</a>
 
-  <h1>Juego de memoria visual:</h1>
-  <a class="enllac" href="https://glsss.netlify.app/memovisual">Memo-visual</a>
+    <h1>Juego de memoria visual:</h1>
+    <a class="enllac" href="https://glsss.netlify.app/memovisual">Memo-visual</a>
+  </main>
 
 </body>
 </html>
