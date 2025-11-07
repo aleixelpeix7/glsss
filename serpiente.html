@@ -6,15 +6,25 @@
   <title>Juego de la serpiente|GLS</title>
  <link rel="icon" href="assets/favicon.png" type="image/png" />
 <style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: #21BCFF;
+    font-family: Arial, sans-serif;
+    color: #FDC745;
+  }
+
   nav {
     background-color: rgba(0, 0, 0, 0.7);
     position: sticky;
     top: 0;
     width: 100%;
-    margin: 0;
-    padding: 1rem 2rem;
-    box-sizing: border-box;
     z-index: 100;
+    padding: 1rem 2rem;
   }
 
   nav ul {
@@ -22,8 +32,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 0;
-    padding: 0;
   }
 
   nav li.logo {
@@ -120,7 +128,7 @@
   </style>
 </head>
 <body>
- <nav>
+<nav>
   <ul>
     <li class="logo">
       <a href="https://glsss.netlify.app">
@@ -133,6 +141,7 @@
     </li>
   </ul>
 </nav>
+
 
   <h1>🐍 Juego de la serpiente</h1>
 
