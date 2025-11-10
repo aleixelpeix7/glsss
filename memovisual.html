@@ -2,78 +2,10 @@
 <html lang="ca">
 <head>
   <meta charset="utf-8" />
-  <title>Memoria Visual | LAG</title>
-  <link rel="icon" href="assets/favicon.png" type="image/png" />
+  <title>Memoria Visual Pro | GLS</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="assets/favicon.png" type="image/png" />
   <style>
-    body {
-  margin: 0;
-  padding: 0;
-  background-color: #002244;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  color: #222;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-
-  nav {
-    background-color: rgba(0, 0, 0, 0.7);
-    position: sticky;
-    top: 0;
-    width: 100%;
-    z-index: 100;
-    padding: 1rem 2rem;
-  }
-
-  nav ul {
-    list-style: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  nav li.logo {
-    display: flex;
-    align-items: center;
-  }
-
-  nav li.logo a {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-  }
-
-  nav li.logo img {
-    height: 60px;
-    margin-right: 0.5rem;
-    vertical-align: middle;
-  }
-
-  nav li.enllacos {
-    display: flex;
-    gap: 2rem;
-  }
-
-  nav a {
-    color: white;
-    text-decoration: none;
-    font-weight: bold;
-    transition: color 0.3s;
-  }
-
-  nav a:hover {
-    color: #ffff66;
-  }
-
     :root{
       --page-accent: #21BCFF;
       --bg-panel: #0f1720;
@@ -85,12 +17,68 @@
       --shadow: rgba(0,0,0,0.6);
     }
 
-    html,body{height:100%;margin:0}
-    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
+        var(--page-accent);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    nav {
+      background-color: rgba(0, 0, 0, 0.7);
+      position: sticky;
+      top: 0;
+      width: 100%;
+      z-index: 100;
+      padding: 1rem 2rem;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    nav li.logo {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    nav li.logo img { height: 60px; vertical-align: middle; }
+
+    .nav-enllac {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1rem;
+      transition: color 0.3s;
+    }
+
+    .nav-enllac:hover { color: #ffff66; }
+
+    .inici-ajustada { margin-left: 1rem; }
+
+    nav li.enllacos { display: flex; gap: 2rem; }
+
+    /* container visual i layout del joc (no canvia mides del joc) */
+    .page-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 80px);
+      padding: 18px;
+    }
 
     .container{
-      width:820px;
-      max-width:100%;
+      width: 820px;
+      max-width: 100%;
       background: linear-gradient(180deg,var(--bg-panel), var(--panel-contrast));
       border-radius:12px;
       padding:20px;
@@ -124,9 +112,7 @@
 
     footer{margin-top:14px;color:var(--muted);text-align:center;font-size:13px}
 
-    /* -------------------
-       START overlay: opac com a la versió anterior (panel que tapa el fons)
-       ------------------- */
+    /* overlays */
     #startOverlay{
       position:absolute;
       inset:0;
@@ -138,7 +124,6 @@
       border-radius:12px;
     }
     #startOverlay .panel{
-      /* mantinc l'estil fosc, no blanc */
       background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
       border: 1px solid rgba(255,255,255,0.08);
       color: var(--text);
@@ -150,24 +135,19 @@
       text-align:center;
     }
 
-    /* -------------------
-       PAUSE & GAMEOVER overlays:
-       - fons semitransparent (deixa veure el que hi ha darrere)
-       - PANEL OPAC (no translúcid): contrasta i no deixa veure la graella dins el panel
-       ------------------- */
     #pauseOverlay, #gameOverOverlay{
       position:absolute;
       inset:0;
       display:flex;
       align-items:center;
       justify-content:center;
-      background: rgba(3,7,12,0.60); /* semitransparent: deixa veure la graella darrere */
+      background: rgba(3,7,12,0.60);
       z-index:35;
       border-radius:12px;
       backdrop-filter: blur(4px);
     }
     #pauseOverlay .panel, #gameOverOverlay .panel{
-      background: linear-gradient(180deg, #0b1220, #0d1418); /* PANEL OPAC (fosc i dens) */
+      background: linear-gradient(180deg, #0b1220, #0d1418);
       border: 1px solid rgba(255,255,255,0.06);
       color: var(--text);
       padding:22px;
@@ -230,67 +210,72 @@
 </head>
 <body>
   <nav>
-  <ul>
-    <li class="logo">
-      <a href="https://lagg.netlify.app">
-        <img src="assets/logo.png" alt="Logo GLS" />
-      </a>
-      <div class="container" role="application" aria-label="Memoria Visual Pro">
-    </li>
-    <li class="enllacos">
-      <a href="https://lagg.netlify.app">Inici</a>
-      <a href="https://lagg.netlify.app/contacte">Contactar</a>
-    </li>
-  </ul>
-</nav>
- 
-  <h1>🧠 Memoria Visual Pro</h1>
-    <div id="info">
-      <div id="nivell">Nivell: 1</div>
-      <div id="mensaje" role="status" aria-live="polite"></div>
-    </div>
+    <ul>
+      <li class="logo">
+        <a href="https://lagg.netlify.app">
+          <img src="assets/logo.png" alt="Logo GLS" />
+        </a>
+        <a class="nav-enllac inici-ajustada" href="https://lagg.netlify.app">Inici</a>
+      </li>
+      <li class="enllacos">
+        <a class="nav-enllac" href="https://lagg.netlify.app/contacte">Contactar</a>
+      </li>
+    </ul>
+  </nav>
 
-    <div id="boardWrap"><div id="cuadros" role="grid" aria-label="Tauler de memòria"></div></div>
-    <footer>Prem ESC per obrir el menú de pausa</footer>
+  <div class="page-wrap">
+    <div class="container" role="application" aria-label="Memoria Visual Pro">
+      <h1>🧠 Memoria Visual Pro</h1>
 
-    <!-- START overlay (OPAC) -->
-    <div id="startOverlay" role="dialog" aria-modal="true" aria-label="Pantalla d'inici">
-      <div class="panel">
-        <h2 style="margin:0 0 8px;color:var(--text)">Començar partida</h2>
-        <p class="small" style="color:var(--muted)">Tria la mida de la graella i prem <strong style="color:var(--text)">Començar</strong></p>
-        <div class="size-options" role="radiogroup" aria-label="Mida de la graella">
-          <div class="size-option" data-size="4" role="radio" aria-checked="false" tabindex="0">2×2 (4)</div>
-          <div class="size-option selected" data-size="9" role="radio" aria-checked="true" tabindex="0">3×3 (9)</div>
-          <div class="size-option" data-size="16" role="radio" aria-checked="false" tabindex="0">4×4 (16)</div>
-        </div>
-        <div style="margin-top:12px"><button class="btn" id="startBtn">Començar</button></div>
-        <p class="small" style="margin-top:12px;color:var(--muted)">Pots prémer ESC per pausar durant el joc</p>
+      <div id="info">
+        <div id="nivell">Nivell: 1</div>
+        <div id="mensaje" role="status" aria-live="polite"></div>
       </div>
-    </div>
 
-    <!-- PAUSE overlay (fons semitransparent, panel OPAC) -->
-    <div id="pauseOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Pausa">
-      <div class="panel">
-        <h2 style="margin:0 0 8px;color:var(--text)">Pausa</h2>
-        <div class="pause-level" id="pauseLevelText">Nivell 1</div>
-        <div class="pause-buttons">
-          <button class="btn" id="resumeBtn">Continuar</button>
-          <button class="btn ghost" id="restartSameBtn">Reinicia mateixa graella</button>
-          <button class="btn ghost" id="toStartBtn">Torna a l'inici</button>
+      <div id="boardWrap"><div id="cuadros" role="grid" aria-label="Tauler de memòria"></div></div>
+      <footer>Prem ESC per obrir el menú de pausa</footer>
+
+      <!-- START overlay (OPAC) -->
+      <div id="startOverlay" role="dialog" aria-modal="true" aria-label="Pantalla d'inici">
+        <div class="panel">
+          <h2 style="margin:0 0 8px;color:var(--text)">Començar partida</h2>
+          <p class="small" style="color:var(--muted)">Tria la mida de la graella i prem <strong style="color:var(--text)">Començar</strong></p>
+          <div class="size-options" role="radiogroup" aria-label="Mida de la graella">
+            <div class="size-option" data-size="4" role="radio" aria-checked="false" tabindex="0">2×2 (4)</div>
+            <div class="size-option selected" data-size="9" role="radio" aria-checked="true" tabindex="0">3×3 (9)</div>
+            <div class="size-option" data-size="16" role="radio" aria-checked="false" tabindex="0">4×4 (16)</div>
+          </div>
+          <div style="margin-top:12px"><button class="btn" id="startBtn">Començar</button></div>
+          <p class="small" style="margin-top:12px;color:var(--muted)">Pots prémer ESC per pausar durant el joc</p>
         </div>
       </div>
-    </div>
 
-    <!-- GAME OVER overlay (fons semitransparent, panel OPAC) -->
-    <div id="gameOverOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Has perdut">
-      <div class="panel">
-        <h2 style="margin:0 0 8px;color:var(--text)">Has perdut!</h2>
-        <p class="small">T’has quedat al nivell <strong id="finalLevel">1</strong></p>
-        <p class="small" id="finalSeqInfo" style="margin-top:6px;color:var(--muted)"></p>
-        <div style="margin-top:12px"><button class="btn" id="retryBtn">Torna a l'inici</button></div>
+      <!-- PAUSE overlay (fons semitransparent, panel OPAC) -->
+      <div id="pauseOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Pausa">
+        <div class="panel">
+          <h2 style="margin:0 0 8px;color:var(--text)">Pausa</h2>
+          <div class="pause-level" id="pauseLevelText">Nivell 1</div>
+          <div class="pause-buttons">
+            <button class="btn" id="resumeBtn">Continuar</button>
+            <button class="btn ghost" id="restartSameBtn">Reinicia mateixes</button>
+            <button class="btn ghost" id="toStartBtn">Torna a l'inici</button>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+
+      <!-- GAME OVER overlay (fons semitransparent, panel OPAC) -->
+      <div id="gameOverOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Has perdut">
+        <div class="panel">
+          <h2 style="margin:0 0 8px;color:var(--text)">Has perdut!</h2>
+          <p class="small">T’has quedat al nivell <strong id="finalLevel">1</strong></p>
+          <p class="small" id="finalSeqInfo" style="margin-top:6px;color:var(--muted)"></p>
+          <div style="margin-top:12px"><button class="btn" id="retryBtn">Torna a l'inici</button></div>
+        </div>
+      </div>
+
+    </div> <!-- tanca .container -->
+  </div> <!-- tanca .page-wrap -->
+
 
   <script>
     window.onload = function () {
