@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Salón de Ritmos</title>
+  <style>
+    :root {
+      --bg:#1e1f24; --room:#2b2f39; --panel:#20222a; --text:#eaeaea;
+      --accent:#ffd45e; --off:#656a77; --on:#4bd17b;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui, Arial, sans-serif; }
+    header { padding:16px 20px; display:flex; align-items:center; justify-content:space-between; }
+    header h1 { margin:0; font-size:20px; }
+    #controls { display:flex; gap:12px; align-items:center; }
+    #controls button, #controls input { background:var(--panel); color:var(--text); border:1px solid #3a3f4a; padding:8px 12px; border-radius:8px; }
+    #controls input[type="range"] { width:160px; }
+    #room { height:420px; background:var(--room); margin:0 20px; border-radius:12px; position:relative; overflow:hidden; box-shadow:inset 0 0 0 1px #3a3f4a; }
+    #footer { background:var(--panel); padding:14px 20px; border-top:1px solid #3a3f4a; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .instrument { width:100px; height:80px; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:grab; user-select:none; border:1px solid #3a3f4a; }
+    .instrument[data-sound="kick"] { background:#d96b6b; }
+    .instrument[data-sound="snare"] { background:#5aa2e0; }
+    .instrument[data-sound="hihat"] { background:#e0d96a; }
+    .instrument[data-sound="clap"] { background:#b98adf; }
+    .placed { position:absolute; width:68px; height:68px; border-radius:50%; border:2px solid #ffffff88; display:flex; align-items:center; justify-content:center; color:#111; font-weight:700; box-shadow:0 2px 10px #00000040; cursor:pointer; }
+    .placed.selected { outline:3px solid var(--accent); }
+    #sequencer { padding:14px 20px; background:var(--panel); border-top:1px solid #3a3f4a; }
+    #seqHeader { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    #steps { display:grid; grid-template-columns: repeat(16, 28px); gap:8px; }
+    .step { width:28px; height:28px; border-radius:6px; background:var(--off); cursor:pointer; border:1px solid #3a3f4a; position:relative; }
+    .step.active { background:var(--on); }
+    .step.current::after { content:""; position:absolute; inset:-3px; border:2px solid var(--accent); border-radius:8px; }
+    #legend { display:flex; gap:12px; align-items:center; color:#aeb4c2; font-size:12px; }
+    #legend span { display:inline-flex; align-items:center; gap:6px; }
+    .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Salón de Ritmos — arrastra y crea tu groove</h1>
+    <div id="controls">
+      <button id="startStop">Iniciar</button>
+      <label>BPM <input id="bpm" type="range" min="50" max="200" value="100"/></label>
+      <span id="bpmVal">100</span>
+      <button id="clear">Limpiar salón</button>
+      <button id="save">Guardar patrón</button>
+      <button id="load">Cargar patrón</button>
+    </div>
+  </header>
+
+  <div id="room" aria-label="Salón"></div>
+
+  <div id="footer" aria-label="Instrumentos">
+    <div class="instrument" draggable="true" data-sound="kick"><strong>Kick</strong><small>bombo</small></div>
+    <div class="instrument" draggable="true" data-sound="snare"><strong>Snare</strong><small>caja</small></div>
+    <div class="instrument" draggable="true" data-sound="hihat"><strong>HiHat</strong><small>charles</small></div>
+    <div class="instrument" draggable="true" data-sound="clap"><strong>Clap</strong><small>palmas</small></div>
+    <div id="legend">
+      <span><span class="dot" style="background:var(--on)"></span>Activo</span>
+      <span><span class="dot" style="background:var(--off)"></span>Inactivo</span>
+      <span><span class="dot" style="background:var(--accent)"></span>Paso actual</span>
+    </div>
+  </div>
+
+  <div id="sequencer">
+    <div id="seqHeader">
+      <div><strong>Secuenciador:</strong> <span id="currentName">—</span></div>
+      <div id="tip">Haz clic en un instrumento del salón para editar su patrón</div>
+    </div>
+    <div id="steps"></div>
+  </div>
+
+  <script>
+    // Audio context
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const audio = new AudioCtx();
+
+    // Sintetizadores simples (puedes cambiarlos por samples .wav)
+    function playKick(time, gainMul=1) {
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(150, time);
+      osc.frequency.exponentialRampToValueAtTime(50, time + 0.12);
+      gain.gain.setValueAtTime(1 * gainMul, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
+      osc.connect(gain).connect(audio.destination);
+      osc.start(time);
+      osc.stop(time + 0.24);
+    }
+    function playSnare(time, gainMul=1) {
+      const noiseBuf = audio.createBuffer(1, audio.sampleRate * 0.2, audio.sampleRate);
+      const data = noiseBuf.getChannelData(0);
+      for (let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * 0.6;
+      const noise = audio.createBufferSource();
+      noise.buffer = noiseBuf;
+      const bandpass = audio.createBiquadFilter();
+      bandpass.type = "bandpass"; bandpass.frequency.value = 1800;
+      const gain = audio.createGain();
+      gain.gain.setValueAtTime(0.8 * gainMul, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+      noise.connect(bandpass).connect(gain).connect(audio.destination);
+      noise.start(time);
+      noise.stop(time + 0.2);
+    }
+    function playHiHat(time, gainMul=1) {
+      const noiseBuf = audio.createBuffer(1, audio.sampleRate * 0.08, audio.sampleRate);
+      const data = noiseBuf.getChannelData(0);
+      for (let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * 0.4;
+      const noise = audio.createBufferSource();
+      noise.buffer = noiseBuf;
+      const highpass = audio.createBiquadFilter();
+      highpass.type = "highpass"; highpass.frequency.value = 6000;
+      const gain = audio.createGain();
+      gain.gain.setValueAtTime(0.5 * gainMul, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+      noise.connect(highpass).connect(gain).connect(audio.destination);
+      noise.start(time);
+      noise.stop(time + 0.1);
+    }
+    function playClap(time, gainMul=1) {
+      const burst = (t, amp) => {
+        const noiseBuf = audio.createBuffer(1, audio.sampleRate * 0.06, audio.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * 0.5;
+        const src = audio.createBufferSource(); src.buffer = noiseBuf;
+        const gain = audio.createGain(); gain.gain.setValueAtTime(amp * gainMul, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+        src.connect(gain).connect(audio.destination);
+        src.start(t); src.stop(t + 0.08);
+      };
+      burst(time, 0.6); burst(time+0.02, 0.5); burst(time+0.04, 0.4);
+    }
+
+    const synthByName = {
+      kick: playKick,
+      snare: playSnare,
+      hihat: playHiHat,
+      clap: playClap,
+    };
+
+    // Estado del secuenciador global
+    const STEPS = 16;
+    let bpm = 100;
+    let isPlaying = false;
+    let schedulerTimer = null;
+    let currentStep = 0;
+
+    // Instrumentos colocados en el salón
+    const room = document.getElementById("room");
+    const instrumentsBar = document.querySelectorAll(".instrument");
+    let placed = []; // {id, name, sound, x, y, pattern:Array<bool>, gain:number}
+
+    // Drag & drop desde la barra
+    let dragged = null;
+    instrumentsBar.forEach(el => {
+      el.addEventListener("dragstart", e => { dragged = el; e.dataTransfer.effectAllowed = "copy"; });
+    });
+    room.addEventListener("dragover", e => e.preventDefault());
+    room.addEventListener("drop", e => {
+      e.preventDefault();
+      if (!dragged) return;
+      const sound = dragged.dataset.sound;
+      const name = dragged.textContent.trim();
+      const id = crypto.randomUUID();
+      const node = document.createElement("div");
+      node.className = "placed instrument";
+      node.dataset.id = id;
+      node.dataset.sound = sound;
+      node.textContent = dragged.textContent.split("\n")[0];
+      node.style.left = (e.offsetX - 34) + "px";
+      node.style.top = (e.offsetY - 34) + "px";
+      room.appendChild(node);
+
+      // patrón por defecto
+      const pattern = new Array(STEPS).fill(false);
+      if (sound === "kick") { pattern[0]=true; pattern[8]=true; }
+      if (sound === "snare") { pattern[4]=true; pattern[12]=true; }
+      if (sound === "hihat") { for (let i=0;i<STEPS;i+=2) pattern[i]=true; }
+      if (sound === "clap") { pattern[12]=true; }
+
+      placed.push({ id, name, sound, x:e.offsetX, y:e.offsetY, pattern, gain:1 });
+      selectPlaced(id);
+    });
+
+    // Selección y movimiento de colocados
+    let draggingPlacedId = null;
+    room.addEventListener("mousedown", e => {
+      const target = e.target.closest(".placed");
+      if (target) {
+        selectPlaced(target.dataset.id);
+        draggingPlacedId = target.dataset.id;
+      } else {
+        // deseleccionar si clic vacío
+        selectPlaced(null);
+      }
+    });
+    room.addEventListener("mousemove", e => {
+      if (!draggingPlacedId) return;
+      const node = [...room.querySelectorAll(".placed")].find(n => n.dataset.id === draggingPlacedId);
+      if (node) {
+        node.style.left = (e.offsetX - 34) + "px";
+        node.style.top = (e.offsetY - 34) + "px";
+      }
+    });
+    room.addEventListener("mouseup", () => { draggingPlacedId = null; });
+
+    // Secuenciador UI
+    const stepsEl = document.getElementById("steps");
+    const currentNameEl = document.getElementById("currentName");
+    function renderSteps(inst) {
+      stepsEl.innerHTML = "";
+      currentNameEl.textContent = inst ? `${inst.name} (${inst.sound})` : "—";
+      for (let i=0;i<STEPS;i++) {
+        const cell = document.createElement("div");
+        cell.className = "step" + (inst?.pattern[i] ? " active" : "");
+        cell.dataset.index = i;
+        cell.addEventListener("click", () => {
+          inst.pattern[i] = !inst.pattern[i];
+          cell.classList.toggle("active");
+        });
+        stepsEl.appendChild(cell);
+      }
+    }
+
+    function selectPlaced(id) {
+      room.querySelectorAll(".placed").forEach(n => n.classList.remove("selected"));
+      const inst = placed.find(p => p.id === id);
+      const node = [...room.querySelectorAll(".placed")].find(n => n.dataset.id === id);
+      if (node) node.classList.add("selected");
+      renderSteps(inst || null);
+    }
+
+    // Scheduler con Web Audio (preciso)
+    function scheduleTick() {
+      const spb = 60 / bpm;           // segundos por negra
+      const stepDur = spb / 4;        // 16 pasos = 4 por negra
+      const ahead = 0.12;             // ventana de programación
+      const now = audio.currentTime;
+
+      // Marca visual del paso actual
+      [...stepsEl.children].forEach((c,i) => c.classList.toggle("current", i === currentStep));
+
+      // Disparar cada instrumento que tenga activo el paso actual
+      placed.forEach(inst => {
+        if (inst.pattern[currentStep]) {
+          const fn = synthByName[inst.sound];
+          if (fn) fn(now + 0.02, inst.gain);
+        }
+      });
+
+      currentStep = (currentStep + 1) % STEPS;
+
+      schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
+    }
+
+    // Controles
+    const bpmInput = document.getElementById("bpm");
+    const bpmVal = document.getElementById("bpmVal");
+    bpmInput.addEventListener("input", () => { bpm = parseInt(bpmInput.value,10); bpmVal.textContent = bpm; });
+
+    const startStopBtn = document.getElementById("startStop");
+    startStopBtn.addEventListener("click", async () => {
+      if (!isPlaying) {
+        // necesario en algunos navegadores: resume audio tras interacción
+        await audio.resume();
+        isPlaying = true; startStopBtn.textContent = "Parar";
+        scheduleTick();
+      } else {
+        isPlaying = false; startStopBtn.textContent = "Iniciar";
+        clearTimeout(schedulerTimer); schedulerTimer = null;
+        [...stepsEl.children].forEach(c => c.classList.remove("current"));
+      }
+    });
+
+    document.getElementById("clear").addEventListener("click", () => {
+      placed = [];
+      room.querySelectorAll(".placed").forEach(n => n.remove());
+      selectPlaced(null);
+    });
+
+    // Guardar/Cargar patrón en localStorage
+    document.getElementById("save").addEventListener("click", () => {
+      localStorage.setItem("salonRitmos", JSON.stringify(placed));
+      alert("Patrón guardado.");
+    });
+    document.getElementById("load").addEventListener("click", () => {
+      const data = localStorage.getItem("salonRitmos");
+      if (!data) return alert("No hay patrón guardado.");
+      placed = JSON.parse(data);
+      // reconstruir nodos
+      room.querySelectorAll(".placed").forEach(n => n.remove());
+      placed.forEach(p => {
+        const node = document.createElement("div");
+        node.className = "placed instrument";
+        node.dataset.id = p.id;
+        node.dataset.sound = p.sound;
+        node.textContent = p.name;
+        node.style.left = (p.x - 34) + "px";
+        node.style.top = (p.y - 34) + "px";
+        // color por tipo
+        node.style.background =
+          p.sound==="kick" ? "#d96b6b" :
+          p.sound==="snare" ? "#5aa2e0" :
+          p.sound==="hihat" ? "#e0d96a" : "#b98adf";
+        room.appendChild(node);
+      });
+      selectPlaced(placed[0]?.id || null);
+    });
+
+    // Inicio con un tip visual
+    renderSteps(null);
+  </script>
+</body>
+</html>
