@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Salón de Ritmos — Graella modular</title>
+  <title>Salón de Ritmos — graella amb drag & drop</title>
   <style>
     :root {
       --bg:#1e1f24; --panel:#2b2f39; --room:#2b2f39; --text:#eaeaea;
@@ -16,43 +16,56 @@
     #controls { display:flex; gap:12px; align-items:center; }
     #controls button, #controls input { background:var(--panel); color:var(--text); border:1px solid var(--line); padding:8px 12px; border-radius:8px; }
     #controls input[type="range"] { width:160px; }
+
+    /* Paleta draggable */
+    #palette {
+      display:flex; gap:12px; align-items:center; padding:12px 20px; margin:0 20px 12px;
+    }
+    .instrument {
+      display:flex; align-items:center; justify-content:center;
+      width:84px; height:64px; border-radius:10px; user-select:none; cursor:grab;
+      border:1px solid var(--line); background:var(--panel);
+      font-weight:600;
+    }
+    .instrument[data-sound="kick"]  { background:#d96b6b; }
+    .instrument[data-sound="snare"] { background:#5aa2e0; }
+    .instrument[data-sound="hihat"] { background:#e0d96a; color:#111; }
+    .instrument[data-sound="clap"]  { background:#b98adf; }
+
+    /* Sala / graella */
     #room {
       background:var(--room); margin:0 20px 20px; border-radius:12px; position:relative; overflow:hidden;
       box-shadow:inset 0 0 0 1px var(--line);
       padding:16px;
     }
-
-    /* Graella de 4 files: cercle buit + select + passos (32) */
     .grid {
       display:grid;
       grid-template-columns: 72px 160px 1fr;
       gap:14px 16px;
       align-items:center;
     }
-    .row {
-      display:contents; /* cada fila ocupa les 3 columnes */
-    }
+    .row { display:contents; }
 
-    /* Cercle buit per “col·locar” instrument */
+    /* Slot (drop target) */
     .slot {
       width:60px; height:60px; border-radius:50%;
       border:2px dashed #7c8291; background:transparent;
       display:flex; align-items:center; justify-content:center;
       color:#aeb4c2; font-size:12px; user-select:none;
+      transition:border-color 120ms ease, box-shadow 120ms ease;
     }
     .slot.filled { border-style:solid; border-color:#aeb4c2; color:#eaeaea; }
+    .slot.drag-over { border-color:var(--accent); box-shadow:0 0 0 3px #ffd45e55; }
 
-    /* Selector d'instrument a la dreta del cercle */
-    .selector {
-      display:flex; align-items:center; gap:8px;
-    }
+    /* Selector d'instrument (sincronitzat amb drop) */
+    .selector { display:flex; align-items:center; gap:8px; }
     .selector label { font-size:12px; color:#aeb4c2; }
     .selector select {
       background:var(--panel); color:var(--text);
       border:1px solid var(--line); padding:8px 10px; border-radius:8px; min-width:140px;
     }
 
-    /* 32 passos ben compactes */
+    /* 32 passos */
     .steps {
       display:grid;
       grid-template-columns: repeat(32, 22px);
@@ -68,13 +81,11 @@
     .step.active { background:var(--on); }
     .step.current { outline:2px solid var(--accent); }
 
-    /* Línia separadora entre files per ordre visual */
     .grid-row-divider {
       grid-column: 1 / -1;
       height:1px; background:var(--line); opacity:0.5; margin:8px 0;
     }
 
-    /* Peu amb llegenda */
     #legend { display:flex; gap:12px; align-items:center; color:#aeb4c2; font-size:12px; padding:0 20px 16px; }
     #legend span { display:inline-flex; align-items:center; gap:6px; }
     .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
@@ -82,13 +93,20 @@
 </head>
 <body>
   <header>
-    <h1>Salón de Ritmos — graella de 4 instruments</h1>
+    <h1>Salón de Ritmos — graella amb drag & drop</h1>
     <div id="controls">
       <button id="startStop">Iniciar</button>
       <label>BPM <input id="bpm" type="range" min="50" max="200" value="100"/></label>
       <span id="bpmVal">100</span>
     </div>
   </header>
+
+  <div id="palette" aria-label="Paleta d'instruments">
+    <div class="instrument" draggable="true" data-sound="kick">Kick</div>
+    <div class="instrument" draggable="true" data-sound="snare">Snare</div>
+    <div class="instrument" draggable="true" data-sound="hihat">HiHat</div>
+    <div class="instrument" draggable="true" data-sound="clap">Clap</div>
+  </div>
 
   <div id="room" aria-label="Salón">
     <div class="grid" id="grid"></div>
@@ -101,11 +119,9 @@
   </div>
 
   <script>
-    // Audio context
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     const audio = new AudioCtx();
 
-    // Sintetitzadors
     function playKick(time, gainMul=1) {
       const osc = audio.createOscillator();
       const gain = audio.createGain();
@@ -154,10 +170,8 @@
       };
       burst(time, 0.6); burst(time+0.02, 0.5); burst(time+0.04, 0.4);
     }
-
     const synthByName = { kick: playKick, snare: playSnare, hihat: playHiHat, clap: playClap };
 
-    // Estat del seqüenciador
     const STEPS = 32;
     let bpm = 100;
     let isPlaying = false;
@@ -182,18 +196,28 @@
       }
     });
 
-    // Construcció de la graella: 4 files
+    // Paleta drag & drop
+    let draggedSound = null;
+    document.querySelectorAll('.instrument').forEach(el => {
+      el.addEventListener('dragstart', e => {
+        draggedSound = el.dataset.sound;
+        e.dataTransfer.setData('text/plain', draggedSound);
+        e.dataTransfer.effectAllowed = 'copy';
+      });
+      el.addEventListener('dragend', () => { draggedSound = null; });
+    });
+
+    // Graella i files
     const grid = document.getElementById("grid");
-    const rows = []; // {slotEl, selectEl, pattern:Array<bool>, stepEls:HTMLElement[]}
+    const rows = []; // { slotEl, selectEl, pattern:Array<bool>, stepEls:[], sound:string|null }
 
     const instrumentNames = { kick: "Kick", snare: "Snare", hihat: "HiHat", clap: "Clap" };
 
-    for (let r=0; r<4; r++) {
-      // Cercle buit (slot)
+    function makeRow() {
       const slot = document.createElement("div");
       slot.className = "slot";
       slot.textContent = "—";
-      // Selector d'instrument
+
       const selectorWrap = document.createElement("div");
       selectorWrap.className = "selector";
       const label = document.createElement("label");
@@ -207,12 +231,10 @@
       selectorWrap.appendChild(label);
       selectorWrap.appendChild(select);
 
-      // Passos (32)
       const steps = document.createElement("div");
       steps.className = "steps";
       const pattern = new Array(STEPS).fill(false);
       const stepEls = [];
-
       for (let i=0; i<STEPS; i++) {
         const cell = document.createElement("div");
         cell.className = "step";
@@ -225,42 +247,62 @@
         stepEls.push(cell);
       }
 
-      // Interacció: quan tries instrument, marquem el slot com “omplert”
-      const updateSlot = () => {
+      // Drag & drop als slots
+      slot.addEventListener("dragover", e => { e.preventDefault(); slot.classList.add('drag-over'); });
+      slot.addEventListener("dragleave", () => slot.classList.remove('drag-over'));
+      slot.addEventListener("drop", e => {
+        e.preventDefault();
+        slot.classList.remove('drag-over');
+        const sound = e.dataTransfer.getData('text/plain') || draggedSound;
+        if (!sound) return;
+        row.sound = sound;
+        select.value = sound; // sincronitza selector
+        slot.classList.add("filled");
+        slot.textContent = instrumentNames[sound];
+      });
+
+      // Doble clic per buidar slot i silenciar la fila
+      slot.addEventListener("dblclick", () => {
+        row.sound = null;
+        slot.classList.remove("filled");
+        slot.textContent = "—";
+      });
+
+      // Canvi manual via selector
+      select.addEventListener("change", () => {
+        row.sound = select.value;
         slot.classList.add("filled");
         slot.textContent = instrumentNames[select.value];
-      };
-      select.addEventListener("change", updateSlot);
-      // Inicial: mostrar instrument per defecte al slot
-      updateSlot();
+      });
 
-      // Append en la graella
+      // Append a la graella
       grid.appendChild(slot);
       grid.appendChild(selectorWrap);
       grid.appendChild(steps);
 
-      // Divisor visual entre files
+      return { slotEl: slot, selectEl: select, pattern, stepEls, sound: select.value };
+    }
+
+    for (let r=0; r<4; r++) {
+      const row = makeRow();
+      rows.push(row);
       if (r < 3) {
         const divider = document.createElement("div");
         divider.className = "grid-row-divider";
         grid.appendChild(divider);
       }
-
-      rows.push({ slotEl: slot, selectEl: select, pattern, stepEls });
     }
 
     // Scheduler
     function scheduleTick() {
       const spb = 60 / bpm;      // segons per negra
-      const stepDur = spb / 4;   // 16é: 4 passos per negra; amb 32 passos, és semicorxera
+      const stepDur = spb / 4;   // semicorxeres amb 32 passos
       const now = audio.currentTime;
 
       rows.forEach(row => {
-        // marca visual del pas actual
         row.stepEls.forEach((el,i) => el.classList.toggle("current", i === currentStep));
-        // dispara si el pas està actiu
-        if (row.pattern[currentStep]) {
-          const fn = synthByName[row.selectEl.value];
+        if (row.sound && row.pattern[currentStep]) {
+          const fn = synthByName[row.sound];
           if (fn) fn(now + 0.02, 1);
         }
       });
