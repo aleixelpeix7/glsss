@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Salón de Ritmos — drag & drop net</title>
+  <title>Salón de Ritmos — drag & drop amb guardar/cargar</title>
   <style>
     :root {
       --bg:#1e1f24; --panel:#2b2f39; --room:#2b2f39; --text:#eaeaea;
@@ -11,10 +11,13 @@
     }
     * { box-sizing: border-box; }
     body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui, Arial, sans-serif; }
-    header { padding:16px 20px; display:flex; align-items:center; justify-content:space-between; }
+    header { padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
     header h1 { margin:0; font-size:20px; }
-    #controls { display:flex; gap:12px; align-items:center; }
-    #controls button, #controls input { background:var(--panel); color:var(--text); border:1px solid var(--line); padding:8px 12px; border-radius:8px; }
+    #controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    #controls button, #controls input {
+      background:var(--panel); color:var(--text); border:1px solid var(--line);
+      padding:8px 12px; border-radius:8px;
+    }
     #controls input[type="range"] { width:160px; }
 
     /* Paleta draggable */
@@ -82,11 +85,14 @@
 </head>
 <body>
   <header>
-    <h1>Salón de Ritmos — drag & drop net</h1>
+    <h1>Salón de Ritmos — drag & drop</h1>
     <div id="controls">
       <button id="startStop">Iniciar</button>
       <label>BPM <input id="bpm" type="range" min="50" max="200" value="100"/></label>
       <span id="bpmVal">100</span>
+      <button id="clear">Limpiar salón</button>
+      <button id="save">Guardar patrón</button>
+      <button id="load">Cargar patrón</button>
     </div>
   </header>
 
@@ -193,8 +199,8 @@
       el.addEventListener('dragstart', e => {
         draggedSound = el.dataset.sound;
         e.dataTransfer.effectAllowed = 'copy';
-        e.dataTransfer.setData('application/x-sound', draggedSound); // tipus propi
-        e.dataTransfer.setData('text/plain', draggedSound);          // fallback
+        e.dataTransfer.setData('application/x-sound', draggedSound);
+        e.dataTransfer.setData('text/plain', draggedSound); // fallback
         el.classList.add('dragging');
       });
       el.addEventListener('dragend', () => {
@@ -205,7 +211,8 @@
 
     // Graella i files
     const grid = document.getElementById("grid");
-    const rows = []; // { slotEl, pattern:Array<bool>, stepEls:[], sound:string|null }
+    const rows = []; // [{ slotEl, pattern:Array<bool>, stepEls:[], sound:string|null }, ...]
+
     const instrumentNames = { kick: "Kick", snare: "Snare", hihat: "HiHat", clap: "Clap" };
 
     function attachSlotDnD(slot, row) {
@@ -218,18 +225,15 @@
         e.preventDefault(); e.stopPropagation();
         slot.classList.add('drag-over');
       });
-
       slot.addEventListener('dragover', e => {
         e.preventDefault(); e.stopPropagation();
         e.dataTransfer.dropEffect = 'copy';
         slot.classList.add('drag-over');
       });
-
       slot.addEventListener('dragleave', e => {
         e.stopPropagation();
         slot.classList.remove('drag-over');
       });
-
       slot.addEventListener('drop', e => {
         e.preventDefault(); e.stopPropagation();
         const targetSlot = e.target.closest('.slot');
@@ -240,6 +244,13 @@
         row.sound = sound;
         slot.classList.add("filled");
         slot.querySelector('.label').textContent = instrumentNames[sound];
+      });
+
+      // Doble clic: buidar
+      slot.addEventListener("dblclick", () => {
+        row.sound = null;
+        slot.classList.remove("filled");
+        slot.querySelector('.label').textContent = "—";
       });
     }
 
@@ -299,6 +310,80 @@
       currentStep = (currentStep + 1) % STEPS;
       schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
     }
+
+    // --------- Net, guardar i carregar ---------
+
+    function serializeRows() {
+      return rows.map(row => ({
+        sound: row.sound || null,
+        pattern: row.pattern.slice(), // còpia
+      }));
+    }
+
+    function applyRowsState(state) {
+      // Net visual
+      rows.forEach(row => {
+        row.sound = null;
+        row.slotEl.classList.remove('filled');
+        row.slotEl.querySelector('.label').textContent = '—';
+        row.pattern.fill(false);
+        row.stepEls.forEach(el => el.classList.remove('active', 'current'));
+      });
+
+      // Aplica estat
+      state.slice(0, rows.length).forEach((st, idx) => {
+        const row = rows[idx];
+        if (st.sound) {
+          row.sound = st.sound;
+          row.slotEl.classList.add('filled');
+          row.slotEl.querySelector('.label').textContent = instrumentNames[st.sound] || st.sound;
+        }
+        st.pattern?.forEach((on, i) => {
+          row.pattern[i] = !!on;
+          row.stepEls[i].classList.toggle('active', !!on);
+        });
+      });
+    }
+
+    // Botó Limpiar salón
+    document.getElementById('clear').addEventListener('click', () => {
+      applyRowsState(rows.map(() => ({ sound:null, pattern:new Array(STEPS).fill(false) })));
+    });
+
+    // Botó Guardar patrón
+    document.getElementById('save').addEventListener('click', () => {
+      const payload = { steps: STEPS, rows: serializeRows(), bpm };
+      localStorage.setItem('salonRitmos_v2', JSON.stringify(payload));
+      alert('Patrón guardado.');
+    });
+
+    // Botó Cargar patrón
+    document.getElementById('load').addEventListener('click', () => {
+      const raw = localStorage.getItem('salonRitmos_v2');
+      if (!raw) return alert('No hay patrón guardado.');
+      try {
+        const payload = JSON.parse(raw);
+        if (!payload || !Array.isArray(payload.rows)) throw new Error('Formato inválido');
+        // Ajust si el guardat té diferent nombre de passos
+        if (payload.steps && payload.steps !== STEPS) {
+          // Si tens 16 o 64, fem adaptació senzilla (truncate o pad)
+          payload.rows.forEach(r => {
+            const arr = new Array(STEPS).fill(false);
+            for (let i=0; i<Math.min(STEPS, r.pattern.length); i++) arr[i] = !!r.pattern[i];
+            r.pattern = arr;
+          });
+        }
+        applyRowsState(payload.rows);
+        if (typeof payload.bpm === 'number') {
+          bpm = payload.bpm;
+          bpmInput.value = bpm;
+          bpmVal.textContent = bpm;
+        }
+        alert('Patrón cargado.');
+      } catch(e) {
+        alert('Error al cargar patrón.');
+      }
+    });
   </script>
 </body>
 </html>
