@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Salón de Ritmos i Melodia — melodia fins a 1000 passos</title>
+<title>Salón de Ritmos i Melodia (melLen ≤ 1000) — agrupat esquerra</title>
 <style>
 :root{
   --bg:#1e1f24; --panel:#2b2f39; --room:#2b2f39; --text:#eaeaea;
@@ -46,7 +46,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
 .vol-wrap{display:flex;align-items:center;gap:8px}
 .vol-wrap input[type="range"]{width:96px}
 
-/* Melodia */
+/* Melodia: ara la fila de passos és flex i les cel·les tenen amplada fixa
+   Això fa que quan hi ha menys columnes (melLen < 32 o qualsevol) quedin agrupades a l'esquerra. */
 .melody-top{display:flex;gap:12px;align-items:center;margin-bottom:8px}
 .instrument-palette{display:flex;gap:8px}
 .mel-instr{padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);cursor:pointer}
@@ -54,8 +55,29 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
 .piano-grid{display:grid;grid-auto-rows:32px;gap:6px}
 .piano-row{display:grid;grid-template-columns:80px 1fr;gap:8px;align-items:center}
 .note-label{width:72px;text-align:center;color:#aeb4c2}
-.note-steps{display:grid;grid-auto-flow:column; gap:6px; align-items:center}
-.note-cell{width:20px;height:28px;border-radius:4px;background:#2e3137;border:1px solid #3a3f4a;cursor:pointer;display:inline-block}
+
+/* Important: use flex for note steps so no stretching */
+.note-steps{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  justify-content:flex-start; /* assegura agrupament a l'esquerra */
+  overflow:auto;
+  white-space:nowrap;
+  padding-bottom:2px;
+}
+
+/* cel·la amb amplada fixa */
+.note-cell{
+  width:20px;
+  height:28px;
+  flex:0 0 20px; /* no es redimensiona */
+  border-radius:4px;
+  background:#2e3137;
+  border:1px solid #3a3f4a;
+  cursor:pointer;
+  display:inline-block;
+}
 .note-cell.active{background:var(--accent);border-color:var(--accent)}
 .note-cell.current{outline:2px solid var(--on)}
 
@@ -65,7 +87,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
 
 @media(max-width:800px){
   .steps{grid-template-columns:repeat(32,18px)}
-  .note-steps .note-cell{width:14px;height:20px}
+  .note-cell{width:14px;height:20px;flex:0 0 14px}
 }
 </style>
 </head>
@@ -145,7 +167,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 const audio = new AudioCtx();
 
-function makeGain(val=1){ const g=audio.createGain(); g.gain.value=val; g.connect(audio.destination); return g; }
 function freqFromNote(note){ return 440 * Math.pow(2, (note-69)/12); }
 
 /* master gain per melodia */
@@ -153,7 +174,7 @@ const masterMelGain = audio.createGain();
 masterMelGain.gain.value = 1;
 masterMelGain.connect(audio.destination);
 
-/* timbres same as before (piano,glock,bass,lead,pad) */
+/* timbres */
 function playMelodyNote(time, midiNote, instName, gainNode){
   const f = freqFromNote(midiNote);
   if(instName === 'piano'){
@@ -187,7 +208,7 @@ function playMelodyNote(time, midiNote, instName, gainNode){
   }
 }
 
-/* Ritme synths (unchanged) */
+/* Ritme synths */
 function playKick(time, gainNode){ const osc=audio.createOscillator(); const g=audio.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(150,time); osc.frequency.exponentialRampToValueAtTime(50,time+0.12); g.gain.setValueAtTime(1,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.22); osc.connect(g).connect(gainNode); osc.start(time); osc.stop(time+0.24); }
 function playSnare(time, gainNode){ const noiseBuf=audio.createBuffer(1,audio.sampleRate*0.2,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.6; const src=audio.createBufferSource(); src.buffer=noiseBuf; const band=audio.createBiquadFilter(); band.type='bandpass'; band.frequency.value=1800; const g=audio.createGain(); g.gain.setValueAtTime(0.8,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.18); src.connect(band).connect(g).connect(gainNode); src.start(time); src.stop(time+0.2); }
 function playHiHat(time, gainNode){ const noiseBuf=audio.createBuffer(1,audio.sampleRate*0.08,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.4; const src=audio.createBufferSource(); src.buffer=noiseBuf; const hp=audio.createBiquadFilter(); hp.type='highpass'; hp.frequency.setValueAtTime(6000,time); const g=audio.createGain(); g.gain.setValueAtTime(0.5,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.08); src.connect(hp).connect(g).connect(gainNode); src.start(time); src.stop(time+0.1); }
@@ -261,7 +282,7 @@ document.querySelectorAll('#palette .instrument').forEach(el=>{
 const instrumentNames = { kick:'Kick', snare:'Snare', hihat:'HiHat', clap:'Clap' };
 const instrumentColorClass = { kick:'kick', snare:'snare', hihat:'hihat', clap:'clap' };
 
-/* Melody sequencer with large melLen support */
+/* Melody sequencer */
 const melInstLabel = document.getElementById('melInstLabel');
 let melInstrument = 'piano';
 document.querySelectorAll('.mel-instr').forEach(el=>{
@@ -273,7 +294,7 @@ const pianoGrid = document.getElementById('pianoGrid');
 const NOTES = [67,66,65,64,63,62,61,60]; // rows
 const noteRows = [];
 
-/* melody length up to 1000 (user requested "infinite -> 1000") */
+/* melLen up to 1000 */
 let melLen = 32;
 const melLenInput = document.getElementById('melLen');
 melLenInput.setAttribute('max','1000');
@@ -283,17 +304,17 @@ melLenInput.addEventListener('input', ()=> {
   if(v > 1000) v = 1000;
   melLen = v;
   melLenInput.value = v;
-  rebuildMelodyGrid(); // regenerate columns to match melLen
+  rebuildMelodyGrid();
 });
 
-/* melody master volume */
+/* mel master volume */
 const melVolInput = document.getElementById('melVol');
 melVolInput.addEventListener('input', ()=> {
   const val = parseInt(melVolInput.value,10) / 100;
   masterMelGain.gain.setValueAtTime(val, audio.currentTime);
 });
 
-/* create rows and initial cells */
+/* build initial melody grid using flex rows */
 function makeMelodyRow(midi){
   const rowWrap = document.createElement('div'); rowWrap.className='piano-row';
   const label = document.createElement('div'); label.className='note-label'; label.textContent = midiToNoteName(midi);
@@ -311,21 +332,19 @@ function makeMelodyRow(midi){
   noteRows.push(r);
   return r;
 }
+
 function midiToNoteName(m){ const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; return names[m%12] + (Math.floor(m/12)-1); }
 
-/* build initial melody grid */
-function buildMelodyGrid(){
+function buildInitialMelodyGrid(){
   pianoGrid.innerHTML = '';
   noteRows.length = 0;
   NOTES.forEach(n=> makeMelodyRow(n));
 }
-buildMelodyGrid();
+buildInitialMelodyGrid();
 
-/* rebuild melody grid when melLen changes (keeps patterns where possible) */
+/* rebuild when melLen changes: keep existing patterns where possible */
 function rebuildMelodyGrid(){
-  // store old patterns
   const oldPatterns = noteRows.map(r => r.pattern.slice());
-  // clear and rebuild
   pianoGrid.innerHTML = '';
   noteRows.length = 0;
   NOTES.forEach((n, idx) => {
@@ -349,15 +368,11 @@ function rebuildMelodyGrid(){
   });
 }
 
-/* initialize mel controls */
+/* Scheduler */
 melLenInput.value = melLen;
 melVolInput.value = 100;
 
-/* Scheduler:
-   - tickCounter increments each tick (no modulo)
-   - rhythmIndex = tickCounter % STEPS (32)
-   - melodyIndex = tickCounter % melLen  (melLen can be up to 1000)
-*/
+let tickCounter = 0;
 function scheduleTick(){
   const spb = 60 / bpm;
   const stepDur = spb / 4;
@@ -366,7 +381,7 @@ function scheduleTick(){
   const rhythmIndex = tickCounter % STEPS;
   const melodyIndex = tickCounter % melLen;
 
-  // rhythm: update visual and play
+  // rhythm
   rows.forEach(row=>{
     row.stepEls.forEach((el,i)=> el.classList.toggle('current', i === rhythmIndex));
     if(row.sound && row.pattern[rhythmIndex]){
@@ -375,7 +390,7 @@ function scheduleTick(){
     }
   });
 
-  // melody: update visual (note cells might be many) and play if active
+  // melody
   noteRows.forEach(r=>{
     r.cells.forEach((el,i)=> el.classList.toggle('current', i === melodyIndex));
     if(r.pattern[melodyIndex]){
@@ -387,7 +402,7 @@ function scheduleTick(){
   schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
 }
 
-/* Save/Load extended to include melLen up to 1000 */
+/* Save/Load (melLen up to 1000) */
 function serializeAll(){
   return {
     version:2,
@@ -420,12 +435,10 @@ function applyAll(state){
     if(typeof state.melody.melLen === 'number'){ const v = Math.max(1, Math.min(1000, Math.floor(state.melody.melLen))); melLen = v; melLenInput.value = v; rebuildMelodyGrid(); }
     if(typeof state.melody.melVol === 'number'){ const v = Math.round(state.melody.melVol*100); melVolInput.value = v; masterMelGain.gain.setValueAtTime(state.melody.melVol, audio.currentTime); }
     if(Array.isArray(state.melody.notes)){
-      // ensure noteRows exist and then apply patterns up to melLen
       const notes = state.melody.notes.slice(0, noteRows.length);
       notes.forEach((n, idx)=>{
         const row = noteRows[idx];
         if(Array.isArray(n.pattern)){
-          // resize arrays if needed
           row.pattern = new Array(melLen).fill(false);
           row.cells.forEach((c,i)=> c.classList.remove('active'));
           for(let i=0;i<Math.min(melLen, n.pattern.length); i++){
@@ -438,7 +451,7 @@ function applyAll(state){
   }
 }
 
-/* Save / Load handlers */
+/* Save/Load handlers */
 document.getElementById('save').addEventListener('click', ()=>{
   const payload = serializeAll();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
@@ -470,34 +483,10 @@ function deactivateAutoScrollAndWheel(){ ritmeRoom.removeEventListener('dragover
 function handleDragOver(e){ e.preventDefault(); const rect = ritmeRoom.getBoundingClientRect(); const y = e.clientY - rect.top; const margin = Math.min(120, rect.height * 0.2); if(y > rect.height - margin){ const intensity = (y - (rect.height - margin)) / margin; startAutoScroll(1, 6 + Math.round(intensity * 18)); } else if (y < margin){ const intensity = (margin - y) / margin; startAutoScroll(-1, 6 + Math.round(intensity * 18)); } else { stopAutoScroll(); } }
 function handleWheelWhileDragging(e){ if(!isDraggingInstrument) return; e.preventDefault(); ritmeRoom.scrollBy({ top: e.deltaY, left:0, behavior:'auto' }); }
 
-/* Helper: initial build of melody grid with default melLen */
-function initialBuildMelodyGrid(){
-  pianoGrid.innerHTML = '';
-  noteRows.length = 0;
-  NOTES.forEach(n => {
-    const rowWrap = document.createElement('div'); rowWrap.className='piano-row';
-    const label = document.createElement('div'); label.className='note-label'; label.textContent = midiToNoteName(n);
-    const steps = document.createElement('div'); steps.className='note-steps';
-    rowWrap.appendChild(label); rowWrap.appendChild(steps); pianoGrid.appendChild(rowWrap);
-    const pattern = new Array(melLen).fill(false);
-    const cells = [];
-    for(let i=0;i<melLen;i++){
-      const c = document.createElement('div'); c.className='note-cell'; c.dataset.index = i;
-      c.addEventListener('click', ()=>{ pattern[i] = !pattern[i]; c.classList.toggle('active'); });
-      steps.appendChild(c); cells.push(c);
-    }
-    const gainNode = audio.createGain(); gainNode.gain.value = 1; gainNode.connect(masterMelGain);
-    noteRows.push({ note: n, elRow: rowWrap, pattern, cells, gainNode });
-  });
-}
-initialBuildMelodyGrid();
-
-/* tiny map utility */
+/* helpers */
 function midiToNoteName(m){ const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; return names[m%12] + (Math.floor(m/12)-1); }
 
-/* Demo: none (no auto patterns) */
-
-/* Done */
+/* initial build completed earlier; no demo patterns to avoid accidental sound */
 </script>
 </body>
 </html>
