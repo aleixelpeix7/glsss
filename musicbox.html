@@ -1,248 +1,450 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Salón de Ritmos — autoscroll integrat</title>
-  <style>
-    :root{
-      --bg:#1e1f24; --panel:#2b2f39; --room:#2b2f39; --text:#eaeaea;
-      --accent:#ffd45e; --off:#656a77; --on:#4bd17b; --line:#3a3f4a;
-      --kick:#d96b6b; --snare:#5aa2e0; --hihat:#e0d96a; --clap:#b98adf;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial,sans-serif}
-    header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-    header h1{margin:0;font-size:18px}
-    #controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    #controls button,#controls input{background:var(--panel);color:var(--text);border:1px solid var(--line);padding:8px 10px;border-radius:8px}
-    #controls input[type="range"]{width:140px}
-    #palette{display:flex;gap:12px;align-items:center;padding:12px 20px;margin:0 20px 12px}
-    .instrument{display:flex;align-items:center;justify-content:center;width:84px;height:56px;border-radius:10px;user-select:none;cursor:grab;border:1px solid var(--line);font-weight:700}
-    .instrument[data-sound="kick"]{background:var(--kick)}
-    .instrument[data-sound="snare"]{background:var(--snare)}
-    .instrument[data-sound="hihat"]{background:var(--hihat);color:#111}
-    .instrument[data-sound="clap"]{background:var(--clap)}
-    #room{background:var(--room);margin:0 20px 20px;border-radius:12px;padding:16px;box-shadow:inset 0 0 0 1px var(--line); max-height:60vh; overflow:auto}
-    .grid{display:grid;grid-template-columns:96px 1fr;gap:14px 16px;align-items:center; padding-bottom:12px}
-    .slot{width:64px;height:64px;border-radius:50%;border:2px dashed #7c8291;background:transparent;display:flex;align-items:center;justify-content:center;color:#aeb4c2;font-size:12px;user-select:none;transition:border-color 120ms,box-shadow 120ms,background 160ms}
-    .slot .label{pointer-events:none;font-weight:700;text-align:center}
-    .slot.filled{color:#111}
-    .slot.drag-over{border-color:var(--accent);box-shadow:0 0 0 6px #ffd45e33}
-    .slot.kick{border-color:var(--kick)}
-    .slot.snare{border-color:var(--snare)}
-    .slot.hihat{border-color:var(--hihat)}
-    .slot.clap{border-color:var(--clap)}
-    .steps{display:grid;grid-template-columns:repeat(32,22px);gap:6px;align-items:center}
-    .step{width:22px;height:22px;border-radius:6px;background:var(--off);cursor:pointer;border:1px solid var(--line);transition:transform 80ms,background 120ms}
-    .step:hover{transform:scale(1.06)}
-    .step.active{background:var(--on)}
-    .step.current{outline:2px solid var(--accent)}
-    .grid-row-divider{grid-column:1/-1;height:1px;background:var(--line);opacity:.45;margin:8px 0}
-    .controls-row{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
-    .vol-wrap{display:flex;align-items:center;gap:8px}
-    .vol-wrap input[type="range"]{width:96px}
-    #legend{display:flex;gap:12px;align-items:center;color:#aeb4c2;font-size:12px;padding:0 20px 12px}
-    .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
-    .instrument.dragging{opacity:.8}
-    @media (max-width:720px){ .grid{grid-template-columns:76px 1fr} .instrument{width:72px;height:48px} .slot{width:56px;height:56px} }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Salón de Ritmos i Melodia</title>
+<style>
+:root{
+  --bg:#1e1f24; --panel:#2b2f39; --room:#2b2f39; --text:#eaeaea;
+  --accent:#ffd45e; --off:#656a77; --on:#4bd17b; --line:#3a3f4a;
+  --kick:#d96b6b; --snare:#5aa2e0; --hihat:#e0d96a; --clap:#b98adf;
+  --piano:#f4c27a; --glock:#9ad0ff; --bass:#a8f7c6; --lead:#f7a8d9; --pad:#cdb4ff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial,sans-serif}
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;gap:12px}
+.title{font-size:18px}
+.top-controls{display:flex;gap:8px;align-items:center}
+.tabbar{display:flex;gap:8px;background:transparent;padding:8px 16px}
+.tab{padding:8px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);cursor:pointer}
+.tab.active{background:linear-gradient(180deg,#ffffff08,transparent);box-shadow:inset 0 -2px 0 #00000033}
+#controls button,#controls input,#controls select{background:var(--panel);color:var(--text);border:1px solid var(--line);padding:8px 10px;border-radius:8px}
+.container{padding:16px}
+.room-wrap{background:var(--room);border-radius:12px;padding:12px;box-shadow:inset 0 0 0 1px var(--line);max-height:62vh;overflow:auto}
+.grid{display:grid;gap:12px}
+.flex{display:flex;gap:12px;align-items:center}
+
+/* Ritme layout */
+.ritme-grid{display:grid;grid-template-columns:96px 1fr;gap:12px 12px;align-items:center;padding-bottom:8px}
+.slot{width:64px;height:64px;border-radius:50%;border:2px dashed #7c8291;background:transparent;display:flex;align-items:center;justify-content:center;color:#aeb4c2;font-size:12px;user-select:none;transition:border-color 120ms,box-shadow 120ms,background 160ms}
+.slot .label{pointer-events:none;font-weight:700;text-align:center}
+.slot.drag-over{border-color:var(--accent);box-shadow:0 0 0 6px #ffd45e33}
+.slot.kick{border-color:var(--kick)}
+.slot.snare{border-color:var(--snare)}
+.slot.hihat{border-color:var(--hihat)}
+.slot.clap{border-color:var(--clap)}
+.steps{display:grid;grid-template-columns:repeat(32,22px);gap:6px;align-items:center}
+.step{width:22px;height:22px;border-radius:6px;background:var(--off);cursor:pointer;border:1px solid var(--line);transition:transform 80ms,background 120ms}
+.step:hover{transform:scale(1.06)}
+.step.active{background:var(--on)}
+.step.current{outline:2px solid var(--accent)}
+.grid-row-divider{grid-column:1/-1;height:1px;background:var(--line);opacity:.45;margin:8px 0}
+.controls-row{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.vol-wrap{display:flex;align-items:center;gap:8px}
+.vol-wrap input[type="range"]{width:96px}
+
+/* Melodia layout */
+.melody-top{display:flex;gap:12px;align-items:center;margin-bottom:8px}
+.instrument-palette{display:flex;gap:8px}
+.mel-instr{padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);cursor:pointer}
+.mel-instr.active{box-shadow:inset 0 -2px 0 #00000033}
+.piano-grid{display:grid;grid-auto-rows:32px;gap:6px}
+.piano-row{display:grid;grid-template-columns:80px 1fr;gap:8px;align-items:center}
+.note-label{width:72px;text-align:center;color:#aeb4c2}
+.note-steps{display:grid;grid-template-columns:repeat(32,20px);gap:6px}
+.note-cell{width:20px;height:28px;border-radius:4px;background:#2e3137;border:1px solid #3a3f4a;cursor:pointer}
+.note-cell.active{background:var(--accent);border-color:var(--accent)}
+.note-cell.current{outline:2px solid var(--on)}
+
+/* legends */
+.legend{display:flex;gap:12px;align-items:center;color:#aeb4c2;margin-top:10px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* responsive */
+@media(max-width:800px){
+  .steps{grid-template-columns:repeat(32,18px)}
+  .note-steps{grid-template-columns:repeat(32,16px)}
+}
+</style>
 </head>
 <body>
-  <header>
-    <h1>Salón de Ritmos — autoscroll integrat</h1>
-    <div id="controls">
-      <button id="startStop">Iniciar</button>
-      <label>BPM <input id="bpm" type="range" min="50" max="200" value="100"/></label>
-      <span id="bpmVal">100</span>
-      <button id="clear">Limpiar salón</button>
-      <button id="save">Guardar patrón</button>
-      <button id="load">Cargar patrón</button>
-      <input id="fileInput" type="file" accept="application/json" style="display:none" />
+  <div class="header">
+    <div class="title">Salón de Ritmos i Melodia</div>
+    <div class="top-controls">
+      <div id="controls" class="flex">
+        <button id="startStop">Iniciar</button>
+        <label>BPM <input id="bpm" type="range" min="50" max="200" value="100"/></label>
+        <span id="bpmVal">100</span>
+        <button id="clear">Limpiar salón</button>
+        <button id="save">Guardar patrón</button>
+        <button id="load">Cargar patrón</button>
+        <input id="fileInput" type="file" accept="application/json" style="display:none" />
+      </div>
     </div>
-  </header>
-
-  <div id="palette" aria-label="Paleta d'instruments">
-    <div class="instrument" draggable="true" data-sound="kick">Kick</div>
-    <div class="instrument" draggable="true" data-sound="snare">Snare</div>
-    <div class="instrument" draggable="true" data-sound="hihat">HiHat</div>
-    <div class="instrument" draggable="true" data-sound="clap">Clap</div>
   </div>
 
-  <div id="room" aria-label="Salón">
-    <div class="grid" id="grid"></div>
+  <div class="tabbar">
+    <div class="tab active" data-tab="ritmo">Salón de Ritmos</div>
+    <div class="tab" data-tab="melodia">Salón de Melodia</div>
   </div>
 
-  <div id="legend">
-    <span><span class="dot" style="background:var(--on)"></span>Activo</span>
-    <span><span class="dot" style="background:var(--off)"></span>Inactivo</span>
-    <span><span class="dot" style="background:var(--accent)"></span>Paso actual</span>
+  <div class="container">
+    <div id="ritmoView" class="room-wrap">
+      <div class="grid ritme-grid" id="ritmeGrid"></div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--on)"></span> Actiu</span>
+        <span><span class="dot" style="background:var(--off)"></span> Inactiu</span>
+        <span><span class="dot" style="background:var(--accent)"></span> Pas actual</span>
+      </div>
+      <div style="height:10px"></div>
+      <div id="palette" aria-label="Paleta d'instruments" style="display:flex;gap:8px">
+        <div class="instrument" draggable="true" data-sound="kick" style="background:var(--kick);padding:8px 10px;border-radius:8px">Kick</div>
+        <div class="instrument" draggable="true" data-sound="snare" style="background:var(--snare);padding:8px 10px;border-radius:8px">Snare</div>
+        <div class="instrument" draggable="true" data-sound="hihat" style="background:var(--hihat);padding:8px 10px;border-radius:8px;color:#111">HiHat</div>
+        <div class="instrument" draggable="true" data-sound="clap" style="background:var(--clap);padding:8px 10px;border-radius:8px">Clap</div>
+      </div>
+    </div>
+
+    <div id="melodiaView" class="room-wrap" style="display:none;margin-top:16px">
+      <div class="melody-top">
+        <div class="instrument-palette" id="melPalette">
+          <div class="mel-instr" data-inst="piano" style="background:var(--piano)">Piano</div>
+          <div class="mel-instr" data-inst="glock" style="background:var(--glock)">Glock</div>
+          <div class="mel-instr" data-inst="bass" style="background:var(--bass)">Bass</div>
+          <div class="mel-instr" data-inst="lead" style="background:var(--lead)">Lead</div>
+          <div class="mel-instr" data-inst="pad" style="background:var(--pad)">Pad</div>
+        </div>
+        <div style="margin-left:auto;color:#aeb4c2">Instrument seleccionat: <strong id="melInstLabel">Piano</strong></div>
+      </div>
+
+      <div id="pianoGrid" class="piano-grid"></div>
+
+      <div class="legend">
+        <span><span class="dot" style="background:var(--accent)"></span> Nota activa</span>
+        <span><span class="dot" style="background:var(--on)"></span> Pas actual</span>
+      </div>
+    </div>
   </div>
 
-  <script>
-    // WebAudio i síntesi
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    const audio = new AudioCtx();
-    function makeGain(g=1){ const n=audio.createGain(); n.gain.value=g; n.connect(audio.destination); return n; }
+<script>
+/* ------------------ WebAudio synths ------------------ */
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const audio = new AudioCtx();
 
-    function playKick(time, gainNode){ const osc=audio.createOscillator(); const g=audio.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(150,time); osc.frequency.exponentialRampToValueAtTime(50,time+0.12); g.gain.setValueAtTime(1,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.22); osc.connect(g).connect(gainNode); osc.start(time); osc.stop(time+0.24); }
-    function playSnare(time, gainNode){ const buf=audio.createBuffer(1,audio.sampleRate*0.2,audio.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.6; const src=audio.createBufferSource(); src.buffer=buf; const band=audio.createBiquadFilter(); band.type='bandpass'; band.frequency.value=1800; const g=audio.createGain(); g.gain.setValueAtTime(0.8,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.18); src.connect(band).connect(g).connect(gainNode); src.start(time); src.stop(time+0.2); }
-    function playHiHat(time, gainNode){ const buf=audio.createBuffer(1,audio.sampleRate*0.08,audio.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.4; const src=audio.createBufferSource(); src.buffer=buf; const hp=audio.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=6000; const g=audio.createGain(); g.gain.setValueAtTime(0.5,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.08); src.connect(hp).connect(g).connect(gainNode); src.start(time); src.stop(time+0.1); }
-    function playClap(time, gainNode){ const burst=(t,a)=>{ const buf=audio.createBuffer(1,audio.sampleRate*0.06,audio.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.5; const s=audio.createBufferSource(); s.buffer=buf; const g=audio.createGain(); g.gain.setValueAtTime(a,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.07); s.connect(g).connect(gainNode); s.start(t); s.stop(t+0.08); }; burst(time,0.6); burst(time+0.02,0.5); burst(time+0.04,0.4); }
-    const synthByName = { kick: playKick, snare: playSnare, hihat: playHiHat, clap: playClap };
+// basic gain bus for melody instruments (we create per-row gain nodes)
+function makeGain(val=1){ const g = audio.createGain(); g.gain.value = val; g.connect(audio.destination); return g; }
 
-    // Estat global
-    const STEPS = 32;
-    let bpm = 100, isPlaying = false, schedulerTimer = null, currentStep = 0;
-    const bpmInput = document.getElementById('bpm'), bpmVal = document.getElementById('bpmVal');
-    bpmInput.addEventListener('input', ()=>{ bpm = parseInt(bpmInput.value,10); bpmVal.textContent = bpm; });
+// simple oscillators / timbres for melody instruments
+function freqFromNote(note){ // note as MIDI number
+  return 440 * Math.pow(2, (note-69)/12);
+}
+function playMelodyNote(time, midiNote, instName, gainNode){
+  const f = freqFromNote(midiNote);
+  if(instName === 'piano' || instName === 'glock'){
+    // bell-ish: sine + FM-ish short envelope
+    const osc = audio.createOscillator(); osc.type='sine';
+    const gain = audio.createGain();
+    osc.frequency.setValueAtTime(f, time);
+    gain.gain.setValueAtTime(0.0001,time);
+    gain.gain.linearRampToValueAtTime(0.9, time+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, time+0.45);
+    osc.connect(gain).connect(gainNode);
+    osc.start(time); osc.stop(time+0.5);
+  } else if(instName === 'bass'){
+    const osc = audio.createOscillator(); osc.type='sawtooth';
+    const filter = audio.createBiquadFilter(); filter.type='lowpass'; filter.frequency.setValueAtTime(800, time);
+    const gain = audio.createGain();
+    gain.gain.setValueAtTime(0.0001,time);
+    gain.gain.linearRampToValueAtTime(0.9, time+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, time+0.6);
+    osc.frequency.setValueAtTime(f*0.5, time);
+    osc.connect(filter).connect(gain).connect(gainNode);
+    osc.start(time); osc.stop(time+0.6);
+  } else if(instName === 'lead'){
+    const osc = audio.createOscillator(); osc.type='square';
+    const gain = audio.createGain();
+    gain.gain.setValueAtTime(0.0001,time);
+    gain.gain.linearRampToValueAtTime(0.8,time+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.002,time+0.4);
+    osc.frequency.setValueAtTime(f, time);
+    osc.connect(gain).connect(gainNode);
+    osc.start(time); osc.stop(time+0.5);
+  } else if(instName === 'pad'){
+    // two detuned saws with slow release
+    const o1 = audio.createOscillator(); o1.type='sawtooth';
+    const o2 = audio.createOscillator(); o2.type='sawtooth';
+    o1.frequency.setValueAtTime(f*0.999, time);
+    o2.frequency.setValueAtTime(f*1.001, time);
+    const gain = audio.createGain(); gain.gain.setValueAtTime(0.0001,time);
+    gain.gain.linearRampToValueAtTime(0.6,time+0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001,time+2.5);
+    o1.connect(gain); o2.connect(gain); gain.connect(gainNode);
+    o1.start(time); o2.start(time); o1.stop(time+2.5); o2.stop(time+2.5);
+  }
+}
 
-    const startStopBtn = document.getElementById('startStop');
-    startStopBtn.addEventListener('click', async ()=>{ if(!isPlaying){ await audio.resume(); isPlaying=true; startStopBtn.textContent='Parar'; scheduleTick(); } else{ isPlaying=false; startStopBtn.textContent='Iniciar'; clearTimeout(schedulerTimer); schedulerTimer=null; document.querySelectorAll('.step').forEach(s=>s.classList.remove('current')); currentStep=0; } });
+/* ------------------ Shared sequencer state ------------------ */
+const STEPS = 32;
+let bpm = 100;
+let isPlaying = false;
+let currentStep = 0;
+let schedulerTimer = null;
 
-    // Paleta DnD
-    let draggedSound = null;
-    let isDraggingInstrument = false;
-    document.querySelectorAll('.instrument').forEach(el=>{
-      el.addEventListener('dragstart', e=>{
-        draggedSound = el.dataset.sound;
-        isDraggingInstrument = true;
-        e.dataTransfer.effectAllowed='copy';
-        e.dataTransfer.setData('application/x-sound', draggedSound);
-        e.dataTransfer.setData('text/plain', draggedSound);
-        el.classList.add('dragging');
-        // activar listeners per autoscroll / wheel al container
-        activateAutoScrollAndWheel();
-      });
-      el.addEventListener('dragend', ()=>{
-        draggedSound = null;
-        isDraggingInstrument = false;
-        el.classList.remove('dragging');
-        deactivateAutoScrollAndWheel();
-      });
+const bpmInput = document.getElementById('bpm'), bpmVal = document.getElementById('bpmVal');
+bpmInput.addEventListener('input', ()=>{ bpm = parseInt(bpmInput.value,10); bpmVal.textContent = bpm; });
+
+const startStopBtn = document.getElementById('startStop');
+startStopBtn.addEventListener('click', async ()=>{
+  if(!isPlaying){ await audio.resume(); isPlaying=true; startStopBtn.textContent='Parar'; scheduleTick(); }
+  else{ isPlaying=false; startStopBtn.textContent='Iniciar'; clearTimeout(schedulerTimer); schedulerTimer=null; document.querySelectorAll('.step, .note-cell').forEach(s=>s.classList.remove('current')); currentStep=0; }
+});
+
+/* ------------------ Ritme: crear 8 files igual que abans ------------------ */
+const ritmeGrid = document.getElementById('ritmeGrid');
+const room = document.getElementById('ritmoView'); // for autoscroll targeting earlier behavior (ritmo room element)
+const rows = []; // each: {slotEl, stepEls, pattern, sound, gainNode, gainVal, volEl}
+
+const instrumentNames = { kick:'Kick', snare:'Snare', hihat:'HiHat', clap:'Clap' };
+const instrumentColorClass = { kick:'kick', snare:'snare', hihat:'hihat', clap:'clap' };
+
+function makeGain(val=1){ const g = audio.createGain(); g.gain.value = val; g.connect(audio.destination); return g; }
+
+function attachSlotDnD(slot, row){
+  const getSound=(e)=> e.dataTransfer.getData('application/x-sound')||e.dataTransfer.getData('text/plain')||draggedSound;
+  slot.addEventListener('dragenter', e=>{ e.preventDefault(); e.stopPropagation(); slot.classList.add('drag-over'); });
+  slot.addEventListener('dragover', e=>{ e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect='copy'; slot.classList.add('drag-over'); });
+  slot.addEventListener('dragleave', e=>{ e.stopPropagation(); slot.classList.remove('drag-over'); });
+  slot.addEventListener('drop', e=>{ e.preventDefault(); e.stopPropagation(); slot.classList.remove('drag-over'); const target = e.target.closest('.slot'); if(!target) return; const sound = getSound(e); if(!sound) return; row.sound = sound; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); row.slotEl.classList.add(instrumentColorClass[sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[sound]; });
+  slot.addEventListener('dblclick', ()=>{ row.sound = null; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); row.slotEl.classList.remove('filled'); row.slotEl.querySelector('.label').textContent = '—'; });
+}
+
+function makeRitmeRow(){
+  const slot = document.createElement('div'); slot.className='slot'; slot.innerHTML='<div class="label">—</div>';
+  const steps = document.createElement('div'); steps.className='steps';
+  const pattern = new Array(STEPS).fill(false); const stepEls = [];
+  for(let i=0;i<STEPS;i++){ const cell=document.createElement('div'); cell.className='step'; cell.dataset.index=i; cell.addEventListener('click', ()=>{ pattern[i]=!pattern[i]; cell.classList.toggle('active'); }); steps.appendChild(cell); stepEls.push(cell); }
+
+  const controlsWrap = document.createElement('div'); controlsWrap.className='controls-row';
+  const volWrap = document.createElement('div'); volWrap.className='vol-wrap';
+  const volLabel = document.createElement('span'); volLabel.textContent='Vol'; volLabel.style.color='#aeb4c2'; volLabel.style.fontSize='12px';
+  const volIn = document.createElement('input'); volIn.type='range'; volIn.min='0'; volIn.max='200'; volIn.value='100';
+  const row = { slotEl: slot, controlsEl: controlsWrap, stepEls, pattern, sound:null, gainNode: makeGain(1), gainVal:1, volEl: volIn };
+  volIn.addEventListener('input', ()=>{ row.gainVal = parseInt(volIn.value,10)/100; if(row.gainNode) row.gainNode.gain.setValueAtTime(row.gainVal, audio.currentTime); });
+  volWrap.appendChild(volLabel); volWrap.appendChild(volIn); controlsWrap.appendChild(volWrap);
+
+  ritmeGrid.appendChild(slot); ritmeGrid.appendChild(controlsWrap); ritmeGrid.appendChild(steps);
+  attachSlotDnD(slot, row);
+  return row;
+}
+
+for(let i=0;i<8;i++){ const row = makeRitmeRow(); rows.push(row); if(i<7){ const d=document.createElement('div'); d.className='grid-row-divider'; ritmeGrid.appendChild(d); } }
+
+/* drag palette for ritme */
+let draggedSound = null;
+let isDraggingInstrument = false;
+document.querySelectorAll('#palette .instrument').forEach(el=>{
+  el.addEventListener('dragstart', e=>{
+    draggedSound = el.dataset.sound;
+    isDraggingInstrument = true;
+    e.dataTransfer.effectAllowed='copy';
+    e.dataTransfer.setData('application/x-sound', draggedSound);
+    e.dataTransfer.setData('text/plain', draggedSound);
+    el.classList.add('dragging');
+    activateAutoScrollAndWheel();
+  });
+  el.addEventListener('dragend', ()=>{ draggedSound=null; isDraggingInstrument=false; document.querySelectorAll('.instrument.dragging').forEach(x=>x.classList.remove('dragging')); deactivateAutoScrollAndWheel(); });
+});
+
+/* --------- Ritme synths (simple) --------- */
+function playKick(time, gainNode){ const osc = audio.createOscillator(); const g = audio.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(150,time); osc.frequency.exponentialRampToValueAtTime(50,time+0.12); g.gain.setValueAtTime(1,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.22); osc.connect(g).connect(gainNode); osc.start(time); osc.stop(time+0.24); }
+function playSnare(time, gainNode){ const noiseBuf = audio.createBuffer(1,audio.sampleRate*0.2,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.6; const src=audio.createBufferSource(); src.buffer=noiseBuf; const band=audio.createBiquadFilter(); band.type='bandpass'; band.frequency.value=1800; const g=audio.createGain(); g.gain.setValueAtTime(0.8,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.18); src.connect(band).connect(g).connect(gainNode); src.start(time); src.stop(time+0.2); }
+function playHiHat(time, gainNode){ const noiseBuf = audio.createBuffer(1,audio.sampleRate*0.08,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.4; const src=audio.createBufferSource(); src.buffer=noiseBuf; const hp=audio.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=6000; const g=audio.createGain(); g.gain.setValueAtTime(0.5,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.08); src.connect(hp).connect(g).connect(gainNode); src.start(time); src.stop(time+0.1); }
+function playClap(time, gainNode){ const burst=(t, amp)=>{ const noiseBuf = audio.createBuffer(1,audio.sampleRate*0.06,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.5; const src=audio.createBufferSource(); src.buffer=noiseBuf; const g=audio.createGain(); g.gain.setValueAtTime(amp,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.07); src.connect(g).connect(gainNode); src.start(t); src.stop(t+0.08); }; burst(time,0.6); burst(time+0.02,0.5); burst(time+0.04,0.4); }
+const synthByName = { kick: playKick, snare: playSnare, hihat: playHiHat, clap: playClap };
+
+/* ------------------ Melody sequencer ------------------ */
+const melPalette = document.getElementById('melPalette');
+const melInstLabel = document.getElementById('melInstLabel');
+let melInstrument = 'piano'; // default
+document.querySelectorAll('.mel-instr').forEach(el=>{
+  el.addEventListener('click', ()=> {
+    document.querySelectorAll('.mel-instr').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+    melInstrument = el.dataset.inst;
+    melInstLabel.textContent = el.textContent;
+  });
+});
+// set default active
+document.querySelector('.mel-instr[data-inst="piano"]').classList.add('active');
+
+const pianoGrid = document.getElementById('pianoGrid');
+// We'll show 8 notes: MIDI 60..67 (C4..G#4) for simplicity
+const NOTES = [67,66,65,64,63,62,61,60]; // descending (top row highest pitch)
+const noteRows = []; // each: {note, elRow, pattern: [bool], gainNode}
+function makeMelodyRow(midi){
+  const rowWrap = document.createElement('div'); rowWrap.className='piano-row';
+  const label = document.createElement('div'); label.className='note-label'; label.textContent = midiToNoteName(midi);
+  const steps = document.createElement('div'); steps.className='note-steps';
+  const pattern = new Array(STEPS).fill(false);
+  const cells = [];
+  for(let i=0;i<STEPS;i++){
+    const c = document.createElement('div'); c.className='note-cell'; c.dataset.index=i;
+    c.addEventListener('click', ()=>{ pattern[i]=!pattern[i]; c.classList.toggle('active'); });
+    steps.appendChild(c); cells.push(c);
+  }
+  rowWrap.appendChild(label); rowWrap.appendChild(steps);
+  pianoGrid.appendChild(rowWrap);
+  const r = { note: midi, elRow: rowWrap, pattern, cells, gainNode: makeGain(1) };
+  noteRows.push(r);
+  return r;
+}
+function midiToNoteName(m){
+  const names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  return names[m%12] + (Math.floor(m/12)-1);
+}
+NOTES.forEach(n=> makeMelodyRow(n));
+
+/* ------------------ Scheduler (plays both rhythm and melody) ------------------ */
+function scheduleTick(){
+  const spb = 60 / bpm;
+  const stepDur = spb / 4;
+  const now = audio.currentTime;
+  // Ritme rows
+  rows.forEach(row=>{
+    row.stepEls.forEach((el,i)=> el.classList.toggle('current', i === currentStep));
+    if(row.sound && row.pattern[currentStep]){
+      const fn = synthByName[row.sound];
+      if(fn) fn(now + 0.02, row.gainNode);
+    }
+  });
+  // Melody rows
+  noteRows.forEach(r=>{
+    r.cells.forEach((el,i)=> el.classList.toggle('current', i === currentStep));
+    if(r.pattern[currentStep]){
+      playMelodyNote(now + 0.02, r.note, melInstrument, r.gainNode);
+    }
+  });
+  currentStep = (currentStep + 1) % STEPS;
+  schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
+}
+
+/* ------------------ Save / Load (serialize both rooms) ------------------ */
+function serializeAll(){
+  return {
+    version:2,
+    steps: STEPS,
+    bpm,
+    rhythm: rows.map(r => ({ sound: r.sound || null, pattern: r.pattern.slice(), vol: r.gainVal ?? 1 })),
+    melody: { instrument: melInstrument, notes: noteRows.map(r=>({m: r.note, pattern: r.pattern.slice()})) }
+  };
+}
+function applyAll(state){
+  if(!state) return;
+  if(typeof state.bpm === 'number'){ bpm = state.bpm; bpmInput.value=bpm; bpmVal.textContent=bpm; }
+  if(Array.isArray(state.rhythm)){
+    // ensure counts: if payload has fewer than rows, only apply those; if more, ignore extras
+    state.rhythm.slice(0, rows.length).forEach((st, idx)=>{
+      const row = rows[idx];
+      row.sound = st.sound || null;
+      Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c));
+      if(st.sound){ row.slotEl.classList.add(instrumentColorClass[st.sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[st.sound] || st.sound; }
+      if(Array.isArray(st.pattern)){ st.pattern.forEach((v,i)=>{ row.pattern[i] = !!v; row.stepEls[i].classList.toggle('active', !!v); }); }
+      if(typeof st.vol === 'number'){ row.gainVal = st.vol; row.gainNode.gain.setValueAtTime(row.gainVal, audio.currentTime); row.volEl.value = Math.round(row.gainVal*100); }
     });
+  }
+  if(state.melody && Array.isArray(state.melody.notes)){
+    if(typeof state.melody.instrument === 'string'){ melInstrument = state.melody.instrument; document.querySelectorAll('.mel-instr').forEach(x=>x.classList.remove('active')); const sel = document.querySelector('.mel-instr[data-inst="'+melInstrument+'"]'); if(sel) sel.classList.add('active'); melInstLabel.textContent = sel ? sel.textContent : melInstrument; }
+    state.melody.notes.slice(0, noteRows.length).forEach((n, idx)=>{ const row = noteRows[idx]; if(Array.isArray(n.pattern)){ n.pattern.forEach((v,i)=>{ row.pattern[i] = !!v; row.cells[i].classList.toggle('active', !!v); }); } });
+  }
+}
 
-    // Graella i files
-    const grid = document.getElementById('grid');
-    const room = document.getElementById('room');
-    const rows = []; // {slotEl, controlsEl, stepEls, pattern, sound, gainNode, gainVal, volEl}
-    const instrumentNames = { kick:'Kick', snare:'Snare', hihat:'HiHat', clap:'Clap' };
-    const instrumentColorClass = { kick:'kick', snare:'snare', hihat:'hihat', clap:'clap' };
+/* Save to file */
+document.getElementById('save').addEventListener('click', ()=>{
+  const payload = serializeAll();
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `salon_full_${new Date().toISOString().replace(/[:.]/g,'-')}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
 
-    function attachSlotDnD(slot, row){
-      const getSound=(e)=> e.dataTransfer.getData('application/x-sound')||e.dataTransfer.getData('text/plain')||draggedSound;
-      slot.addEventListener('dragenter', e=>{ e.preventDefault(); e.stopPropagation(); slot.classList.add('drag-over'); });
-      slot.addEventListener('dragover', e=>{ e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect='copy'; slot.classList.add('drag-over'); });
-      slot.addEventListener('dragleave', e=>{ e.stopPropagation(); slot.classList.remove('drag-over'); });
-      slot.addEventListener('drop', e=>{ e.preventDefault(); e.stopPropagation(); slot.classList.remove('drag-over'); const target = e.target.closest('.slot'); if(!target) return; const sound = getSound(e); if(!sound) return; row.sound = sound; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); row.slotEl.classList.add(instrumentColorClass[sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[sound]; });
-      slot.addEventListener('dblclick', ()=>{ row.sound = null; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); row.slotEl.classList.remove('filled'); row.slotEl.querySelector('.label').textContent = '—'; });
-    }
+/* Load from file */
+const fileInput = document.getElementById('fileInput');
+document.getElementById('load').addEventListener('click', ()=> fileInput.click());
+fileInput.addEventListener('change', async ()=>{
+  const f = fileInput.files[0]; if(!f) return;
+  try{
+    const text = await f.text(); const payload = JSON.parse(text);
+    applyAll(payload);
+    alert('Patró carregat.');
+  }catch(e){ alert('Error al carregar el fitxer.'); }
+  finally{ fileInput.value = ''; }
+});
 
-    function makeRow(){
-      const slot = document.createElement('div'); slot.className='slot'; slot.innerHTML='<div class="label">—</div>';
-      const steps = document.createElement('div'); steps.className='steps';
-      const pattern = new Array(STEPS).fill(false); const stepEls = [];
-      for(let i=0;i<STEPS;i++){ const cell=document.createElement('div'); cell.className='step'; cell.dataset.index=i; cell.addEventListener('click', ()=>{ pattern[i]=!pattern[i]; cell.classList.toggle('active'); }); steps.appendChild(cell); stepEls.push(cell); }
+/* Clear */
+document.getElementById('clear').addEventListener('click', ()=>{
+  // clear rhythm
+  rows.forEach(r=>{ r.sound=null; Object.values(instrumentColorClass).forEach(c=>r.slotEl.classList.remove(c)); r.slotEl.classList.remove('filled'); r.slotEl.querySelector('.label').textContent='—'; r.pattern.fill(false); r.stepEls.forEach(el=>el.classList.remove('active','current')); r.gainVal=1; r.gainNode.gain.setValueAtTime(1,audio.currentTime); r.volEl.value=100; });
+  // clear melody
+  noteRows.forEach(r=>{ r.pattern.fill(false); r.cells.forEach(c=>c.classList.remove('active','current')); });
+});
 
-      const controlsWrap = document.createElement('div'); controlsWrap.className='controls-row';
-      const volWrap = document.createElement('div'); volWrap.className='vol-wrap';
-      const volLabel = document.createElement('span'); volLabel.textContent='Vol'; volLabel.style.color='#aeb4c2'; volLabel.style.fontSize='12px';
-      const volIn = document.createElement('input'); volIn.type='range'; volIn.min='0'; volIn.max='200'; volIn.value='100';
-      const row = { slotEl: slot, controlsEl: controlsWrap, stepEls, pattern, sound:null, gainNode: makeGain(1), gainVal:1, volEl: volIn };
-      volIn.addEventListener('input', ()=>{ row.gainVal = parseInt(volIn.value,10)/100; if(row.gainNode) row.gainNode.gain.setValueAtTime(row.gainVal, audio.currentTime); });
-      volWrap.appendChild(volLabel); volWrap.appendChild(volIn); controlsWrap.appendChild(volWrap);
+/* ------------------ Tabs UI ------------------ */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const tab = t.dataset.tab;
+    document.getElementById('ritmoView').style.display = (tab==='ritmo') ? '' : 'none';
+    document.getElementById('melodiaView').style.display = (tab==='melodia') ? '' : 'none';
+  });
+});
 
-      grid.appendChild(slot); grid.appendChild(controlsWrap); grid.appendChild(steps);
-      attachSlotDnD(slot, row);
-      return row;
-    }
+/* ------------------ Autoscroll dins container per ritme (millorat) ------------------ */
+const ritmeRoom = document.getElementById('ritmoView');
+let autoScrollInterval = null;
+function startAutoScroll(direction, speed = 8){
+  stopAutoScroll();
+  autoScrollInterval = setInterval(()=>{ ritmeRoom.scrollBy({ top: direction * speed, behavior: 'auto' }); }, 50);
+}
+function stopAutoScroll(){ if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval = null; } }
 
-    // Crear 8 files inicials
-    function createInitialRows(n=8){ for(let i=0;i<n;i++){ const row=makeRow(); rows.push(row); if(i < n-1){ const d=document.createElement('div'); d.className='grid-row-divider'; grid.appendChild(d); } } }
-    createInitialRows(8);
+function activateAutoScrollAndWheel(){
+  ritmeRoom.addEventListener('dragover', handleDragOver, { passive:false });
+  ritmeRoom.addEventListener('wheel', handleWheelWhileDragging, { passive:false });
+}
+function deactivateAutoScrollAndWheel(){
+  ritmeRoom.removeEventListener('dragover', handleDragOver);
+  ritmeRoom.removeEventListener('wheel', handleWheelWhileDragging);
+  stopAutoScroll();
+}
 
-    // Scheduler
-    function scheduleTick(){ const spb = 60 / bpm; const stepDur = spb / 4; const now = audio.currentTime;
-      rows.forEach(row=>{ row.stepEls.forEach((el,i)=> el.classList.toggle('current', i===currentStep)); if(row.sound && row.pattern[currentStep]){ const fn = synthByName[row.sound]; if(fn) fn(now+0.02, row.gainNode); } });
-      currentStep = (currentStep + 1) % STEPS;
-      schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
-    }
+function handleDragOver(e){
+  e.preventDefault();
+  const rect = ritmeRoom.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const margin = Math.min(120, rect.height * 0.2);
+  if(y > rect.height - margin){
+    const intensity = (y - (rect.height - margin)) / margin;
+    startAutoScroll(1, 6 + Math.round(intensity * 18));
+  } else if (y < margin){
+    const intensity = (margin - y) / margin;
+    startAutoScroll(-1, 6 + Math.round(intensity * 18));
+  } else { stopAutoScroll(); }
+}
+function handleWheelWhileDragging(e){
+  if(!isDraggingInstrument) return;
+  e.preventDefault();
+  ritmeRoom.scrollBy({ top: e.deltaY, left:0, behavior:'auto' });
+}
 
-    // Serialize / apply state
-    function serializeRows(){ return rows.map(r => ({ sound: r.sound || null, pattern: r.pattern.slice(), vol: r.gainVal ?? 1 })); }
-    function applyRowsState(state){
-      rows.forEach(row=>{ row.sound=null; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); row.slotEl.classList.remove('filled'); row.slotEl.querySelector('.label').textContent='—'; row.pattern.fill(false); row.stepEls.forEach(el=>el.classList.remove('active','current')); row.gainVal=1; row.gainNode.gain.setValueAtTime(1,audio.currentTime); row.volEl.value=100; });
-      state.slice(0, rows.length).forEach((st, idx)=>{ const row = rows[idx]; if(st.sound){ row.sound = st.sound; row.slotEl.classList.add(instrumentColorClass[st.sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[st.sound] || st.sound; } if(Array.isArray(st.pattern)){ st.pattern.forEach((p,i)=>{ row.pattern[i] = !!p; row.stepEls[i].classList.toggle('active', !!p); }); } if(typeof st.vol === 'number'){ row.gainVal = st.vol; row.gainNode.gain.setValueAtTime(row.gainVal,audio.currentTime); row.volEl.value = Math.round(row.gainVal*100); } });
-    }
+/* ------------------ Init notes: optional preset ------------------ */
+// small demo pattern for rhythm and melody to show functionality (comment out if not wanted)
+rows[0].pattern[0]=rows[0].stepEls[0].classList.add('active') && true;
+rows[0].pattern[8]=rows[0].stepEls[8].classList.add('active') && true;
+rows[1].pattern[4]=rows[1].stepEls[4].classList.add('active') && true;
+noteRows[0].pattern[0]=noteRows[0].cells[0].classList.add('active') && true;
 
-    // Clear / Save / Load
-    document.getElementById('clear').addEventListener('click', ()=> applyRowsState(rows.map(()=>({ sound:null, pattern:new Array(STEPS).fill(false), vol:1 }))));
-
-    document.getElementById('save').addEventListener('click', ()=>{
-      const payload = { version:2, steps:STEPS, bpm, rows: serializeRows() };
-      const blob = new Blob([JSON.stringify(payload,null,2)], { type:'application/json' });
-      const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href = url; a.download = `salon_ritmos_${new Date().toISOString().replace(/[:.]/g,'-')}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    });
-
-    const fileInput = document.getElementById('fileInput');
-    document.getElementById('load').addEventListener('click', ()=> fileInput.click());
-    fileInput.addEventListener('change', async ()=>{
-      const f = fileInput.files[0]; if(!f) return;
-      try{ const text = await f.text(); const payload = JSON.parse(text); if(!payload || !Array.isArray(payload.rows)) throw new Error('Formato inválido');
-        if(payload.steps && payload.steps !== STEPS){ payload.rows.forEach(r=>{ const arr = new Array(STEPS).fill(false); for(let i=0;i<Math.min(STEPS, r.pattern.length); i++) arr[i]=!!r.pattern[i]; r.pattern = arr; }); }
-        applyRowsState(payload.rows);
-        if(typeof payload.bpm === 'number'){ bpm = payload.bpm; bpmInput.value = bpm; bpmVal.textContent = bpm; }
-        alert('Patró carregat.');
-      }catch(e){ alert('Error en carregar el JSON.'); } finally{ fileInput.value = ''; }
-    });
-
-    // ------------------ Autoscroll dins el container (millorat) ------------------
-    let autoScrollInterval = null;
-    function startAutoScroll(direction, speed = 8) {
-      stopAutoScroll();
-      autoScrollInterval = setInterval(() => {
-        room.scrollBy({ top: direction * speed, behavior: 'auto' });
-      }, 50);
-    }
-    function stopAutoScroll() {
-      if (autoScrollInterval) { clearInterval(autoScrollInterval); autoScrollInterval = null; }
-    }
-
-    // Ara els listeners s'enganxen AL container 'room' (no a window)
-    function activateAutoScrollAndWheel() {
-      room.addEventListener('dragover', handleDragOver, { passive: false });
-      room.addEventListener('wheel', handleWheelWhileDragging, { passive: false });
-    }
-    function deactivateAutoScrollAndWheel() {
-      room.removeEventListener('dragover', handleDragOver);
-      room.removeEventListener('wheel', handleWheelWhileDragging);
-      stopAutoScroll();
-    }
-
-    function handleDragOver(e) {
-      e.preventDefault();
-      const rect = room.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const margin = Math.min(120, rect.height * 0.2);
-      if (y > rect.height - margin) {
-        const intensity = (y - (rect.height - margin)) / margin;
-        startAutoScroll(1, 6 + Math.round(intensity * 18));
-      } else if (y < margin) {
-        const intensity = (margin - y) / margin;
-        startAutoScroll(-1, 6 + Math.round(intensity * 18));
-      } else {
-        stopAutoScroll();
-      }
-    }
-
-    function handleWheelWhileDragging(e) {
-      if (!isDraggingInstrument) return;
-      e.preventDefault();
-      room.scrollBy({ top: e.deltaY, left: 0, behavior: 'auto' });
-    }
-    // ------------------ Fi autoscroll ------------------
-
-    // Tot llest
-  </script>
+/* ------------------ Done ------------------ */
+</script>
 </body>
 </html>
