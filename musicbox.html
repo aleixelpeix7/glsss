@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Salón de Ritmos i Melodia — sons diferenciats i paleta a dalt</title>
+<title>Salón de Ritmos i Melodia — correccions UI i markers</title>
 <style>
 :root{
   --bg:#1e1f24; --panel:#2b2f39; --room:#2b2f39; --text:#eaeaea;
@@ -24,6 +24,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
 .grid{display:grid;gap:12px}
 .flex{display:flex;gap:12px;align-items:center}
 
+/* Controls superiors arreglats */
+.controls-ui{display:flex;gap:8px;align-items:center}
+.controls-ui button, .controls-ui input[type="range"], .controls-ui span{
+  background:var(--panel); color:var(--text); border:1px solid var(--line);
+  padding:8px 10px; border-radius:8px; font-size:13px;
+}
+.controls-ui label{display:flex;gap:8px;align-items:center}
+
 /* Ritme layout */
 .ritme-top{display:flex;gap:12px;align-items:center;margin-bottom:8px}
 .ritme-grid{display:grid;grid-template-columns:96px 1fr;gap:12px 12px;align-items:center;padding-bottom:8px}
@@ -38,7 +46,11 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
 .step{width:22px;height:22px;border-radius:6px;background:var(--off);cursor:pointer;border:1px solid var(--line);transition:transform 80ms,background 120ms}
 .step:hover{transform:scale(1.06)}
 .step.active{background:var(--on)}
-.step.current{outline:2px solid var(--accent)}
+.step.current{outline:2px solid var(--accent); box-shadow:none}
+
+/* Nota: current és només indicador visual del pas que sona.
+   active és l'estat lògic que dispara so. No hem d'inicialitzar cap d'aquestes per defecte. */
+
 .grid-row-divider{grid-column:1/-1;height:1px;background:var(--line);opacity:.45;margin:8px 0}
 .controls-row{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .vol-wrap{display:flex;align-items:center;gap:8px}
@@ -72,7 +84,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
   <div class="header">
     <div class="title">Salón de Ritmos i Melodia</div>
     <div class="top-controls">
-      <div id="controls" class="flex">
+      <div id="controls" class="controls-ui">
         <button id="startStop">Iniciar</button>
         <label>BPM <input id="bpm" type="range" min="50" max="200" value="100"/></label>
         <span id="bpmVal">100</span>
@@ -93,7 +105,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
     <!-- Ritme view -->
     <div id="ritmoView" class="room-wrap">
       <div class="ritme-top">
-        <!-- PALLETA MOVIDA A DALT: ara es troba aquí -->
+        <!-- paleta a dalt -->
         <div id="palette" aria-label="Paleta d'instruments" style="display:flex;gap:8px">
           <div class="instrument" draggable="true" data-sound="kick" style="background:var(--kick);padding:8px 10px;border-radius:8px">Kick</div>
           <div class="instrument" draggable="true" data-sound="snare" style="background:var(--snare);padding:8px 10px;border-radius:8px">Snare</div>
@@ -135,75 +147,68 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
   </div>
 
 <script>
-/* ------------------ WebAudio i timbres millorats ------------------ */
+/* ------------------ WebAudio i timbres ------------------ */
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 const audio = new AudioCtx();
 
 function makeGain(val=1){ const g=audio.createGain(); g.gain.value=val; g.connect(audio.destination); return g; }
 function freqFromNote(note){ return 440 * Math.pow(2, (note-69)/12); }
 
-/* Melodia: timbres diferenciats per instrument (Piano vs Glock clarament diferents) */
 function playMelodyNote(time, midiNote, instName, gainNode){
   const f = freqFromNote(midiNote);
   if(instName === 'piano'){
-    // piano-like: short attack, medium decay, slight harmonic by adding a triangle
-    const osc1 = audio.createOscillator(); osc1.type='triangle'; osc1.frequency.setValueAtTime(f, time);
-    const osc2 = audio.createOscillator(); osc2.type='sine'; osc2.frequency.setValueAtTime(f*2, time); // octave harmonic
-    const g = audio.createGain(); g.gain.setValueAtTime(0.0001, time); g.gain.linearRampToValueAtTime(0.9, time+0.008); g.gain.exponentialRampToValueAtTime(0.001, time+0.6);
-    osc1.connect(g); osc2.connect(g);
-    g.connect(gainNode);
+    const osc1 = audio.createOscillator(); osc1.type='triangle'; osc1.frequency.setValueAtTime(f,time);
+    const osc2 = audio.createOscillator(); osc2.type='sine'; osc2.frequency.setValueAtTime(f*2,time);
+    const g = audio.createGain(); g.gain.setValueAtTime(0.0001,time); g.gain.linearRampToValueAtTime(0.9,time+0.008); g.gain.exponentialRampToValueAtTime(0.001,time+0.6);
+    osc1.connect(g); osc2.connect(g); g.connect(gainNode);
     osc1.start(time); osc2.start(time); osc1.stop(time+0.65); osc2.stop(time+0.65);
   } else if(instName === 'glock'){
-    // glockenspiel: bell-ish with fast attack and shorter decay, add FM-like detune
-    const carrier = audio.createOscillator(); carrier.type='sine'; carrier.frequency.setValueAtTime(f, time);
-    const mod = audio.createOscillator(); mod.type='sine'; mod.frequency.setValueAtTime(2 * f, time);
-    const modGain = audio.createGain(); modGain.gain.setValueAtTime(f*0.0006, time); // subtle FM
-    mod.connect(modGain);
-    modGain.connect(carrier.frequency);
-    const g = audio.createGain(); g.gain.setValueAtTime(0.0001, time); g.gain.linearRampToValueAtTime(1, time+0.004); g.gain.exponentialRampToValueAtTime(0.001, time+0.35);
+    const carrier = audio.createOscillator(); carrier.type='sine'; carrier.frequency.setValueAtTime(f,time);
+    const mod = audio.createOscillator(); mod.type='sine'; mod.frequency.setValueAtTime(2*f,time);
+    const modGain = audio.createGain(); modGain.gain.setValueAtTime(f*0.0006,time);
+    mod.connect(modGain); modGain.connect(carrier.frequency);
+    const g = audio.createGain(); g.gain.setValueAtTime(0.0001,time); g.gain.linearRampToValueAtTime(1,time+0.004); g.gain.exponentialRampToValueAtTime(0.001,time+0.35);
     carrier.connect(g); g.connect(gainNode);
-    mod.start(time); carrier.start(time);
-    carrier.stop(time+0.5); mod.stop(time+0.5);
+    mod.start(time); carrier.start(time); carrier.stop(time+0.5); mod.stop(time+0.5);
   } else if(instName === 'bass'){
-    const osc = audio.createOscillator(); osc.type='sawtooth'; osc.frequency.setValueAtTime(f*0.5, time);
-    const filt = audio.createBiquadFilter(); filt.type='lowpass'; filt.frequency.setValueAtTime(900, time);
-    const g = audio.createGain(); g.gain.setValueAtTime(0.0001, time); g.gain.linearRampToValueAtTime(0.9,time+0.01); g.gain.exponentialRampToValueAtTime(0.001,time+0.6);
-    osc.connect(filt).connect(g).connect(gainNode);
-    osc.start(time); osc.stop(time+0.6);
+    const osc = audio.createOscillator(); osc.type='sawtooth'; osc.frequency.setValueAtTime(f*0.5,time);
+    const filt = audio.createBiquadFilter(); filt.type='lowpass'; filt.frequency.setValueAtTime(900,time);
+    const g = audio.createGain(); g.gain.setValueAtTime(0.0001,time); g.gain.linearRampToValueAtTime(0.9,time+0.01); g.gain.exponentialRampToValueAtTime(0.001,time+0.6);
+    osc.connect(filt).connect(g).connect(gainNode); osc.start(time); osc.stop(time+0.6);
   } else if(instName === 'lead'){
-    const osc = audio.createOscillator(); osc.type='square'; osc.frequency.setValueAtTime(f, time);
+    const osc = audio.createOscillator(); osc.type='square'; osc.frequency.setValueAtTime(f,time);
     const g = audio.createGain(); g.gain.setValueAtTime(0.0001,time); g.gain.linearRampToValueAtTime(0.8,time+0.01); g.gain.exponentialRampToValueAtTime(0.002,time+0.5);
-    osc.connect(g).connect(gainNode);
-    osc.start(time); osc.stop(time+0.5);
+    osc.connect(g).connect(gainNode); osc.start(time); osc.stop(time+0.5);
   } else if(instName === 'pad'){
-    const o1 = audio.createOscillator(); o1.type='sawtooth'; o1.frequency.setValueAtTime(f*0.999, time);
-    const o2 = audio.createOscillator(); o2.type='sawtooth'; o2.frequency.setValueAtTime(f*1.001, time);
-    const g = audio.createGain(); g.gain.setValueAtTime(0.0001, time); g.gain.linearRampToValueAtTime(0.6,time+0.05); g.gain.exponentialRampToValueAtTime(0.001,time+2.5);
-    o1.connect(g); o2.connect(g); g.connect(gainNode);
-    o1.start(time); o2.start(time); o1.stop(time+2.5); o2.stop(time+2.5);
+    const o1 = audio.createOscillator(); o1.type='sawtooth'; o1.frequency.setValueAtTime(f*0.999,time);
+    const o2 = audio.createOscillator(); o2.type='sawtooth'; o2.frequency.setValueAtTime(f*1.001,time);
+    const g = audio.createGain(); g.gain.setValueAtTime(0.0001,time); g.gain.linearRampToValueAtTime(0.6,time+0.05); g.gain.exponentialRampToValueAtTime(0.001,time+2.5);
+    o1.connect(g); o2.connect(g); g.connect(gainNode); o1.start(time); o2.start(time); o1.stop(time+2.5); o2.stop(time+2.5);
   }
 }
 
-/* Ritme synths (igual amb guany nodes per fila) */
+/* Ritme synths */
 function playKick(time, gainNode){ const osc=audio.createOscillator(); const g=audio.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(150,time); osc.frequency.exponentialRampToValueAtTime(50,time+0.12); g.gain.setValueAtTime(1,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.22); osc.connect(g).connect(gainNode); osc.start(time); osc.stop(time+0.24); }
 function playSnare(time, gainNode){ const noiseBuf=audio.createBuffer(1,audio.sampleRate*0.2,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.6; const src=audio.createBufferSource(); src.buffer=noiseBuf; const band=audio.createBiquadFilter(); band.type='bandpass'; band.frequency.value=1800; const g=audio.createGain(); g.gain.setValueAtTime(0.8,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.18); src.connect(band).connect(g).connect(gainNode); src.start(time); src.stop(time+0.2); }
 function playHiHat(time, gainNode){ const noiseBuf=audio.createBuffer(1,audio.sampleRate*0.08,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.4; const src=audio.createBufferSource(); src.buffer=noiseBuf; const hp=audio.createBiquadFilter(); hp.type='highpass'; hp.frequency.setValueAtTime(6000,time); const g=audio.createGain(); g.gain.setValueAtTime(0.5,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.08); src.connect(hp).connect(g).connect(gainNode); src.start(time); src.stop(time+0.1); }
 function playClap(time, gainNode){ const burst=(t,a)=>{ const buf=audio.createBuffer(1,audio.sampleRate*0.06,audio.sampleRate); const dd=buf.getChannelData(0); for(let i=0;i<dd.length;i++) dd[i]=(Math.random()*2-1)*0.5; const s=audio.createBufferSource(); s.buffer=buf; const g=audio.createGain(); g.gain.setValueAtTime(a,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.07); s.connect(g).connect(gainNode); s.start(t); s.stop(t+0.08); }; burst(time,0.6); burst(time+0.02,0.5); burst(time+0.04,0.4); }
 const synthByName = { kick: playKick, snare: playSnare, hihat: playHiHat, clap: playClap };
 
-/* ------------------ Shared sequencer state ------------------ */
+/* ------------------ State i UI ------------------ */
 const STEPS = 32;
 let bpm = 100, isPlaying=false, currentStep=0, schedulerTimer=null;
-const bpmInput = document.getElementById('bpm'), bpmVal = document.getElementById('bpmVal');
-bpmInput.addEventListener('input', ()=>{ bpm = parseInt(bpmInput.value,10); bpmVal.textContent = bpm; });
+const bpmInput = document.getElementById('bpm'), bpmVal=document.getElementById('bpmVal');
+bpmInput.addEventListener('input', ()=>{ bpm = parseInt(bpmInput.value,10); bpmVal.textContent=bpm; });
 
 const startStopBtn = document.getElementById('startStop');
 startStopBtn.addEventListener('click', async ()=>{ if(!isPlaying){ await audio.resume(); isPlaying=true; startStopBtn.textContent='Parar'; scheduleTick(); } else{ isPlaying=false; startStopBtn.textContent='Iniciar'; clearTimeout(schedulerTimer); schedulerTimer=null; document.querySelectorAll('.step, .note-cell').forEach(s=>s.classList.remove('current')); currentStep=0; } });
 
-/* ------------------ Ritme: crear 8 files ------------------ */
+/* Ritme UI */
 const ritmeGrid = document.getElementById('ritmeGrid');
 const ritmeRoom = document.getElementById('ritmoView');
 const rows = [];
+
+function makeGain(val=1){ const g=audio.createGain(); g.gain.value=val; g.connect(audio.destination); return g; }
 
 function attachSlotDnD(slot, row){
   const getSound=(e)=> e.dataTransfer.getData('application/x-sound')||e.dataTransfer.getData('text/plain')||draggedSound;
@@ -235,13 +240,12 @@ function makeRitmeRow(){
 
 for(let i=0;i<8;i++){ const row = makeRitmeRow(); rows.push(row); if(i<7){ const d=document.createElement('div'); d.className='grid-row-divider'; ritmeGrid.appendChild(d); } }
 
-/* ---------- drag palette (ara està a sobre del saló) ---------- */
+/* Palette drag */
 let draggedSound=null;
 let isDraggingInstrument=false;
 document.querySelectorAll('#palette .instrument').forEach(el=>{
   el.addEventListener('dragstart', e=>{
-    draggedSound = el.dataset.sound;
-    isDraggingInstrument = true;
+    draggedSound = el.dataset.sound; isDraggingInstrument = true;
     e.dataTransfer.effectAllowed='copy';
     e.dataTransfer.setData('application/x-sound', draggedSound);
     e.dataTransfer.setData('text/plain', draggedSound);
@@ -251,11 +255,11 @@ document.querySelectorAll('#palette .instrument').forEach(el=>{
   el.addEventListener('dragend', ()=>{ draggedSound=null; isDraggingInstrument=false; document.querySelectorAll('.instrument.dragging').forEach(x=>x.classList.remove('dragging')); deactivateAutoScrollAndWheel(); });
 });
 
-/* ------------------ Ritme synth map ------------------ */
+/* instrument maps */
 const instrumentNames = { kick:'Kick', snare:'Snare', hihat:'HiHat', clap:'Clap' };
 const instrumentColorClass = { kick:'kick', snare:'snare', hihat:'hihat', clap:'clap' };
 
-/* ------------------ Melody sequencer ------------------ */
+/* Melody sequencer */
 const melInstLabel = document.getElementById('melInstLabel');
 let melInstrument = 'piano';
 document.querySelectorAll('.mel-instr').forEach(el=>{
@@ -264,22 +268,21 @@ document.querySelectorAll('.mel-instr').forEach(el=>{
 document.querySelector('.mel-instr[data-inst="piano"]').classList.add('active');
 
 const pianoGrid = document.getElementById('pianoGrid');
-const NOTES = [67,66,65,64,63,62,61,60]; // C4..G4 descending
+const NOTES = [67,66,65,64,63,62,61,60];
 const noteRows = [];
 function makeMelodyRow(midi){
   const rowWrap = document.createElement('div'); rowWrap.className='piano-row';
   const label = document.createElement('div'); label.className='note-label'; label.textContent = midiToNoteName(midi);
   const steps = document.createElement('div'); steps.className='note-steps';
-  const pattern = new Array(STEPS).fill(false); const cells = [];
+  const pattern = new Array(STEPS).fill(false); const cells=[];
   for(let i=0;i<STEPS;i++){ const c=document.createElement('div'); c.className='note-cell'; c.dataset.index=i; c.addEventListener('click', ()=>{ pattern[i]=!pattern[i]; c.classList.toggle('active'); }); steps.appendChild(c); cells.push(c); }
   rowWrap.appendChild(label); rowWrap.appendChild(steps); pianoGrid.appendChild(rowWrap);
-  const r = { note: midi, elRow: rowWrap, pattern, cells, gainNode: makeGain(1) };
-  noteRows.push(r); return r;
+  const r={note:midi,elRow:rowWrap,pattern,cells,gainNode:makeGain(1)}; noteRows.push(r); return r;
 }
 function midiToNoteName(m){ const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; return names[m%12] + (Math.floor(m/12)-1); }
 NOTES.forEach(n=> makeMelodyRow(n));
 
-/* ------------------ Scheduler (ritme + melodia) ------------------ */
+/* Scheduler */
 function scheduleTick(){
   const spb = 60 / bpm; const stepDur = spb / 4; const now = audio.currentTime;
   rows.forEach(row=>{ row.stepEls.forEach((el,i)=> el.classList.toggle('current', i===currentStep)); if(row.sound && row.pattern[currentStep]){ const fn = synthByName[row.sound]; if(fn) fn(now+0.02, row.gainNode); } });
@@ -288,45 +291,38 @@ function scheduleTick(){
   schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
 }
 
-/* ------------------ Save / Load for both rooms ------------------ */
-function serializeAll(){
-  return { version:2, steps:STEPS, bpm, rhythm: rows.map(r=>({ sound: r.sound||null, pattern: r.pattern.slice(), vol: r.gainVal ?? 1 })), melody: { instrument: melInstrument, notes: noteRows.map(r=>({ m: r.note, pattern: r.pattern.slice() })) } };
-}
+/* Save / Load */
+function serializeAll(){ return { version:2, steps:STEPS, bpm, rhythm: rows.map(r=>({ sound: r.sound||null, pattern: r.pattern.slice(), vol: r.gainVal ?? 1 })), melody: { instrument:melInstrument, notes: noteRows.map(r=>({m:r.note, pattern:r.pattern.slice()})) } }; }
 function applyAll(state){
   if(!state) return;
-  if(typeof state.bpm==='number'){ bpm = state.bpm; bpmInput.value=bpm; bpmVal.textContent=bpm; }
-  if(Array.isArray(state.rhythm)){ state.rhythm.slice(0, rows.length).forEach((st, idx)=>{ const row = rows[idx]; row.sound = st.sound || null; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); if(st.sound){ row.slotEl.classList.add(instrumentColorClass[st.sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[st.sound] || st.sound; } if(Array.isArray(st.pattern)){ st.pattern.forEach((v,i)=>{ row.pattern[i] = !!v; row.stepEls[i].classList.toggle('active', !!v); }); } if(typeof st.vol==='number'){ row.gainVal = st.vol; row.gainNode.gain.setValueAtTime(row.gainVal, audio.currentTime); row.volEl.value = Math.round(row.gainVal*100); } }); }
-  if(state.melody && Array.isArray(state.melody.notes)){ if(typeof state.melody.instrument === 'string'){ melInstrument = state.melody.instrument; document.querySelectorAll('.mel-instr').forEach(x=>x.classList.remove('active')); const sel = document.querySelector('.mel-instr[data-inst="'+melInstrument+'"]'); if(sel) sel.classList.add('active'); melInstLabel.textContent = sel ? sel.textContent : melInstrument; } state.melody.notes.slice(0,noteRows.length).forEach((n, idx)=>{ const row = noteRows[idx]; if(Array.isArray(n.pattern)){ n.pattern.forEach((v,i)=>{ row.pattern[i] = !!v; row.cells[i].classList.toggle('active', !!v); }); } }); }
+  if(typeof state.bpm==='number'){ bpm=state.bpm; bpmInput.value=bpm; bpmVal.textContent=bpm; }
+  if(Array.isArray(state.rhythm)){ state.rhythm.slice(0,rows.length).forEach((st,idx)=>{ const row=rows[idx]; row.sound = st.sound || null; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); if(st.sound){ row.slotEl.classList.add(instrumentColorClass[st.sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[st.sound] || st.sound; } if(Array.isArray(st.pattern)){ st.pattern.forEach((v,i)=>{ row.pattern[i]=!!v; row.stepEls[i].classList.toggle('active', !!v); }); } if(typeof st.vol==='number'){ row.gainVal = st.vol; row.gainNode.gain.setValueAtTime(row.gainVal, audio.currentTime); row.volEl.value = Math.round(row.gainVal*100); } }); }
+  if(state.melody && Array.isArray(state.melody.notes)){ if(typeof state.melody.instrument === 'string'){ melInstrument = state.melody.instrument; document.querySelectorAll('.mel-instr').forEach(x=>x.classList.remove('active')); const sel = document.querySelector('.mel-instr[data-inst="'+melInstrument+'"]'); if(sel) sel.classList.add('active'); melInstLabel.textContent = sel ? sel.textContent : melInstrument; } state.melody.notes.slice(0,noteRows.length).forEach((n,idx)=>{ const row=noteRows[idx]; if(Array.isArray(n.pattern)){ n.pattern.forEach((v,i)=>{ row.pattern[i]=!!v; row.cells[i].classList.toggle('active', !!v); }); } }); }
 }
 
-/* Save file */
-document.getElementById('save').addEventListener('click', ()=>{ const payload = serializeAll(); const blob = new Blob([JSON.stringify(payload,null,2)], { type:'application/json' }); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`salon_full_${new Date().toISOString().replace(/[:.]/g,'-')}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); });
+document.getElementById('save').addEventListener('click', ()=>{ const payload = serializeAll(); const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`salon_full_${new Date().toISOString().replace(/[:.]/g,'-')}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); });
 
-/* Load file */
 const fileInput = document.getElementById('fileInput');
 document.getElementById('load').addEventListener('click', ()=> fileInput.click());
-fileInput.addEventListener('change', async ()=>{ const f = fileInput.files[0]; if(!f) return; try{ const text = await f.text(); const payload = JSON.parse(text); applyAll(payload); alert('Patró carregat.'); }catch(e){ alert('Error al carregar el fitxer.'); } finally{ fileInput.value = ''; } });
+fileInput.addEventListener('change', async ()=>{ const f=fileInput.files[0]; if(!f) return; try{ const text = await f.text(); const payload = JSON.parse(text); applyAll(payload); alert('Patró carregat.'); }catch(e){ alert('Error al carregar el fitxer.'); } finally{ fileInput.value = ''; } });
 
 /* Clear */
 document.getElementById('clear').addEventListener('click', ()=>{ rows.forEach(r=>{ r.sound=null; Object.values(instrumentColorClass).forEach(c=>r.slotEl.classList.remove(c)); r.slotEl.classList.remove('filled'); r.slotEl.querySelector('.label').textContent='—'; r.pattern.fill(false); r.stepEls.forEach(el=>el.classList.remove('active','current')); r.gainVal=1; r.gainNode.gain.setValueAtTime(1,audio.currentTime); r.volEl.value=100; }); noteRows.forEach(r=>{ r.pattern.fill(false); r.cells.forEach(c=>c.classList.remove('active','current')); }); });
 
-/* Tabs UI */
-document.querySelectorAll('.tab').forEach(t=>{ t.addEventListener('click', ()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); const tab = t.dataset.tab; document.getElementById('ritmoView').style.display = (tab==='ritmo') ? '' : 'none'; document.getElementById('melodiaView').style.display = (tab==='melodia') ? '' : 'none'; }); });
+/* Tabs */
+document.querySelectorAll('.tab').forEach(t=>{ t.addEventListener('click', ()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); const tab=t.dataset.tab; document.getElementById('ritmoView').style.display=(tab==='ritmo') ? '' : 'none'; document.getElementById('melodiaView').style.display=(tab==='melodia') ? '' : 'none'; }); });
 
 /* Autoscroll dins container (ritme) */
-let autoScrollInterval = null;
-function startAutoScroll(direction, speed=8){ stopAutoScroll(); autoScrollInterval = setInterval(()=>{ ritmeRoom.scrollBy({ top: direction * speed, behavior:'auto' }); },50); }
+let autoScrollInterval=null;
+function startAutoScroll(direction,speed=8){ stopAutoScroll(); autoScrollInterval = setInterval(()=>{ ritmeRoom.scrollBy({ top: direction * speed, behavior: 'auto' }); },50); }
 function stopAutoScroll(){ if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval=null; } }
 function activateAutoScrollAndWheel(){ ritmeRoom.addEventListener('dragover', handleDragOver, { passive:false }); ritmeRoom.addEventListener('wheel', handleWheelWhileDragging, { passive:false }); }
 function deactivateAutoScrollAndWheel(){ ritmeRoom.removeEventListener('dragover', handleDragOver); ritmeRoom.removeEventListener('wheel', handleWheelWhileDragging); stopAutoScroll(); }
 function handleDragOver(e){ e.preventDefault(); const rect = ritmeRoom.getBoundingClientRect(); const y = e.clientY - rect.top; const margin = Math.min(120, rect.height * 0.2); if(y > rect.height - margin){ const intensity = (y - (rect.height - margin)) / margin; startAutoScroll(1, 6 + Math.round(intensity * 18)); } else if (y < margin){ const intensity = (margin - y) / margin; startAutoScroll(-1, 6 + Math.round(intensity * 18)); } else { stopAutoScroll(); } }
 function handleWheelWhileDragging(e){ if(!isDraggingInstrument) return; e.preventDefault(); ritmeRoom.scrollBy({ top: e.deltaY, left:0, behavior:'auto' }); }
 
-/* Demo tiny presets (optional) */
-rows[0].pattern[0]=rows[0].stepEls[0].classList.add('active') && true;
-rows[0].pattern[8]=rows[0].stepEls[8].classList.add('active') && true;
-rows[1].pattern[4]=rows[1].stepEls[4].classList.add('active') && true;
-noteRows[0].pattern[0]=noteRows[0].cells[0].classList.add('active') && true;
+/* IMPORTANT: no hi ha presets automàtics per defecte que marquin notes o passos.
+   Això evita que s'escolti so de manera inesperada al carregar la pàgina. */
 
 /* Done */
 </script>
