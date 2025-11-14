@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Salón de Ritmos i Melodia</title>
+<title>Salón de Ritmos i Melodia — sons diferenciats i paleta a dalt</title>
 <style>
 :root{
   --bg:#1e1f24; --panel:#2b2f39; --room:#2b2f39; --text:#eaeaea;
@@ -19,13 +19,13 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
 .tabbar{display:flex;gap:8px;background:transparent;padding:8px 16px}
 .tab{padding:8px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);cursor:pointer}
 .tab.active{background:linear-gradient(180deg,#ffffff08,transparent);box-shadow:inset 0 -2px 0 #00000033}
-#controls button,#controls input,#controls select{background:var(--panel);color:var(--text);border:1px solid var(--line);padding:8px 10px;border-radius:8px}
 .container{padding:16px}
 .room-wrap{background:var(--room);border-radius:12px;padding:12px;box-shadow:inset 0 0 0 1px var(--line);max-height:62vh;overflow:auto}
 .grid{display:grid;gap:12px}
 .flex{display:flex;gap:12px;align-items:center}
 
 /* Ritme layout */
+.ritme-top{display:flex;gap:12px;align-items:center;margin-bottom:8px}
 .ritme-grid{display:grid;grid-template-columns:96px 1fr;gap:12px 12px;align-items:center;padding-bottom:8px}
 .slot{width:64px;height:64px;border-radius:50%;border:2px dashed #7c8291;background:transparent;display:flex;align-items:center;justify-content:center;color:#aeb4c2;font-size:12px;user-select:none;transition:border-color 120ms,box-shadow 120ms,background 160ms}
 .slot .label{pointer-events:none;font-weight:700;text-align:center}
@@ -90,22 +90,29 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
   </div>
 
   <div class="container">
+    <!-- Ritme view -->
     <div id="ritmoView" class="room-wrap">
+      <div class="ritme-top">
+        <!-- PALLETA MOVIDA A DALT: ara es troba aquí -->
+        <div id="palette" aria-label="Paleta d'instruments" style="display:flex;gap:8px">
+          <div class="instrument" draggable="true" data-sound="kick" style="background:var(--kick);padding:8px 10px;border-radius:8px">Kick</div>
+          <div class="instrument" draggable="true" data-sound="snare" style="background:var(--snare);padding:8px 10px;border-radius:8px">Snare</div>
+          <div class="instrument" draggable="true" data-sound="hihat" style="background:var(--hihat);padding:8px 10px;border-radius:8px;color:#111">HiHat</div>
+          <div class="instrument" draggable="true" data-sound="clap" style="background:var(--clap);padding:8px 10px;border-radius:8px">Clap</div>
+        </div>
+        <div style="margin-left:auto;color:#aeb4c2">Arrossega un instrument al cercle de la fila</div>
+      </div>
+
       <div class="grid ritme-grid" id="ritmeGrid"></div>
+
       <div class="legend">
         <span><span class="dot" style="background:var(--on)"></span> Actiu</span>
         <span><span class="dot" style="background:var(--off)"></span> Inactiu</span>
         <span><span class="dot" style="background:var(--accent)"></span> Pas actual</span>
       </div>
-      <div style="height:10px"></div>
-      <div id="palette" aria-label="Paleta d'instruments" style="display:flex;gap:8px">
-        <div class="instrument" draggable="true" data-sound="kick" style="background:var(--kick);padding:8px 10px;border-radius:8px">Kick</div>
-        <div class="instrument" draggable="true" data-sound="snare" style="background:var(--snare);padding:8px 10px;border-radius:8px">Snare</div>
-        <div class="instrument" draggable="true" data-sound="hihat" style="background:var(--hihat);padding:8px 10px;border-radius:8px;color:#111">HiHat</div>
-        <div class="instrument" draggable="true" data-sound="clap" style="background:var(--clap);padding:8px 10px;border-radius:8px">Clap</div>
-      </div>
     </div>
 
+    <!-- Melodia view -->
     <div id="melodiaView" class="room-wrap" style="display:none;margin-top:16px">
       <div class="melody-top">
         <div class="instrument-palette" id="melPalette">
@@ -128,87 +135,75 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
   </div>
 
 <script>
-/* ------------------ WebAudio synths ------------------ */
+/* ------------------ WebAudio i timbres millorats ------------------ */
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 const audio = new AudioCtx();
 
-// basic gain bus for melody instruments (we create per-row gain nodes)
-function makeGain(val=1){ const g = audio.createGain(); g.gain.value = val; g.connect(audio.destination); return g; }
+function makeGain(val=1){ const g=audio.createGain(); g.gain.value=val; g.connect(audio.destination); return g; }
+function freqFromNote(note){ return 440 * Math.pow(2, (note-69)/12); }
 
-// simple oscillators / timbres for melody instruments
-function freqFromNote(note){ // note as MIDI number
-  return 440 * Math.pow(2, (note-69)/12);
-}
+/* Melodia: timbres diferenciats per instrument (Piano vs Glock clarament diferents) */
 function playMelodyNote(time, midiNote, instName, gainNode){
   const f = freqFromNote(midiNote);
-  if(instName === 'piano' || instName === 'glock'){
-    // bell-ish: sine + FM-ish short envelope
-    const osc = audio.createOscillator(); osc.type='sine';
-    const gain = audio.createGain();
-    osc.frequency.setValueAtTime(f, time);
-    gain.gain.setValueAtTime(0.0001,time);
-    gain.gain.linearRampToValueAtTime(0.9, time+0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, time+0.45);
-    osc.connect(gain).connect(gainNode);
-    osc.start(time); osc.stop(time+0.5);
+  if(instName === 'piano'){
+    // piano-like: short attack, medium decay, slight harmonic by adding a triangle
+    const osc1 = audio.createOscillator(); osc1.type='triangle'; osc1.frequency.setValueAtTime(f, time);
+    const osc2 = audio.createOscillator(); osc2.type='sine'; osc2.frequency.setValueAtTime(f*2, time); // octave harmonic
+    const g = audio.createGain(); g.gain.setValueAtTime(0.0001, time); g.gain.linearRampToValueAtTime(0.9, time+0.008); g.gain.exponentialRampToValueAtTime(0.001, time+0.6);
+    osc1.connect(g); osc2.connect(g);
+    g.connect(gainNode);
+    osc1.start(time); osc2.start(time); osc1.stop(time+0.65); osc2.stop(time+0.65);
+  } else if(instName === 'glock'){
+    // glockenspiel: bell-ish with fast attack and shorter decay, add FM-like detune
+    const carrier = audio.createOscillator(); carrier.type='sine'; carrier.frequency.setValueAtTime(f, time);
+    const mod = audio.createOscillator(); mod.type='sine'; mod.frequency.setValueAtTime(2 * f, time);
+    const modGain = audio.createGain(); modGain.gain.setValueAtTime(f*0.0006, time); // subtle FM
+    mod.connect(modGain);
+    modGain.connect(carrier.frequency);
+    const g = audio.createGain(); g.gain.setValueAtTime(0.0001, time); g.gain.linearRampToValueAtTime(1, time+0.004); g.gain.exponentialRampToValueAtTime(0.001, time+0.35);
+    carrier.connect(g); g.connect(gainNode);
+    mod.start(time); carrier.start(time);
+    carrier.stop(time+0.5); mod.stop(time+0.5);
   } else if(instName === 'bass'){
-    const osc = audio.createOscillator(); osc.type='sawtooth';
-    const filter = audio.createBiquadFilter(); filter.type='lowpass'; filter.frequency.setValueAtTime(800, time);
-    const gain = audio.createGain();
-    gain.gain.setValueAtTime(0.0001,time);
-    gain.gain.linearRampToValueAtTime(0.9, time+0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, time+0.6);
-    osc.frequency.setValueAtTime(f*0.5, time);
-    osc.connect(filter).connect(gain).connect(gainNode);
+    const osc = audio.createOscillator(); osc.type='sawtooth'; osc.frequency.setValueAtTime(f*0.5, time);
+    const filt = audio.createBiquadFilter(); filt.type='lowpass'; filt.frequency.setValueAtTime(900, time);
+    const g = audio.createGain(); g.gain.setValueAtTime(0.0001, time); g.gain.linearRampToValueAtTime(0.9,time+0.01); g.gain.exponentialRampToValueAtTime(0.001,time+0.6);
+    osc.connect(filt).connect(g).connect(gainNode);
     osc.start(time); osc.stop(time+0.6);
   } else if(instName === 'lead'){
-    const osc = audio.createOscillator(); osc.type='square';
-    const gain = audio.createGain();
-    gain.gain.setValueAtTime(0.0001,time);
-    gain.gain.linearRampToValueAtTime(0.8,time+0.01);
-    gain.gain.exponentialRampToValueAtTime(0.002,time+0.4);
-    osc.frequency.setValueAtTime(f, time);
-    osc.connect(gain).connect(gainNode);
+    const osc = audio.createOscillator(); osc.type='square'; osc.frequency.setValueAtTime(f, time);
+    const g = audio.createGain(); g.gain.setValueAtTime(0.0001,time); g.gain.linearRampToValueAtTime(0.8,time+0.01); g.gain.exponentialRampToValueAtTime(0.002,time+0.5);
+    osc.connect(g).connect(gainNode);
     osc.start(time); osc.stop(time+0.5);
   } else if(instName === 'pad'){
-    // two detuned saws with slow release
-    const o1 = audio.createOscillator(); o1.type='sawtooth';
-    const o2 = audio.createOscillator(); o2.type='sawtooth';
-    o1.frequency.setValueAtTime(f*0.999, time);
-    o2.frequency.setValueAtTime(f*1.001, time);
-    const gain = audio.createGain(); gain.gain.setValueAtTime(0.0001,time);
-    gain.gain.linearRampToValueAtTime(0.6,time+0.05);
-    gain.gain.exponentialRampToValueAtTime(0.001,time+2.5);
-    o1.connect(gain); o2.connect(gain); gain.connect(gainNode);
+    const o1 = audio.createOscillator(); o1.type='sawtooth'; o1.frequency.setValueAtTime(f*0.999, time);
+    const o2 = audio.createOscillator(); o2.type='sawtooth'; o2.frequency.setValueAtTime(f*1.001, time);
+    const g = audio.createGain(); g.gain.setValueAtTime(0.0001, time); g.gain.linearRampToValueAtTime(0.6,time+0.05); g.gain.exponentialRampToValueAtTime(0.001,time+2.5);
+    o1.connect(g); o2.connect(g); g.connect(gainNode);
     o1.start(time); o2.start(time); o1.stop(time+2.5); o2.stop(time+2.5);
   }
 }
 
+/* Ritme synths (igual amb guany nodes per fila) */
+function playKick(time, gainNode){ const osc=audio.createOscillator(); const g=audio.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(150,time); osc.frequency.exponentialRampToValueAtTime(50,time+0.12); g.gain.setValueAtTime(1,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.22); osc.connect(g).connect(gainNode); osc.start(time); osc.stop(time+0.24); }
+function playSnare(time, gainNode){ const noiseBuf=audio.createBuffer(1,audio.sampleRate*0.2,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.6; const src=audio.createBufferSource(); src.buffer=noiseBuf; const band=audio.createBiquadFilter(); band.type='bandpass'; band.frequency.value=1800; const g=audio.createGain(); g.gain.setValueAtTime(0.8,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.18); src.connect(band).connect(g).connect(gainNode); src.start(time); src.stop(time+0.2); }
+function playHiHat(time, gainNode){ const noiseBuf=audio.createBuffer(1,audio.sampleRate*0.08,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.4; const src=audio.createBufferSource(); src.buffer=noiseBuf; const hp=audio.createBiquadFilter(); hp.type='highpass'; hp.frequency.setValueAtTime(6000,time); const g=audio.createGain(); g.gain.setValueAtTime(0.5,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.08); src.connect(hp).connect(g).connect(gainNode); src.start(time); src.stop(time+0.1); }
+function playClap(time, gainNode){ const burst=(t,a)=>{ const buf=audio.createBuffer(1,audio.sampleRate*0.06,audio.sampleRate); const dd=buf.getChannelData(0); for(let i=0;i<dd.length;i++) dd[i]=(Math.random()*2-1)*0.5; const s=audio.createBufferSource(); s.buffer=buf; const g=audio.createGain(); g.gain.setValueAtTime(a,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.07); s.connect(g).connect(gainNode); s.start(t); s.stop(t+0.08); }; burst(time,0.6); burst(time+0.02,0.5); burst(time+0.04,0.4); }
+const synthByName = { kick: playKick, snare: playSnare, hihat: playHiHat, clap: playClap };
+
 /* ------------------ Shared sequencer state ------------------ */
 const STEPS = 32;
-let bpm = 100;
-let isPlaying = false;
-let currentStep = 0;
-let schedulerTimer = null;
-
+let bpm = 100, isPlaying=false, currentStep=0, schedulerTimer=null;
 const bpmInput = document.getElementById('bpm'), bpmVal = document.getElementById('bpmVal');
 bpmInput.addEventListener('input', ()=>{ bpm = parseInt(bpmInput.value,10); bpmVal.textContent = bpm; });
 
 const startStopBtn = document.getElementById('startStop');
-startStopBtn.addEventListener('click', async ()=>{
-  if(!isPlaying){ await audio.resume(); isPlaying=true; startStopBtn.textContent='Parar'; scheduleTick(); }
-  else{ isPlaying=false; startStopBtn.textContent='Iniciar'; clearTimeout(schedulerTimer); schedulerTimer=null; document.querySelectorAll('.step, .note-cell').forEach(s=>s.classList.remove('current')); currentStep=0; }
-});
+startStopBtn.addEventListener('click', async ()=>{ if(!isPlaying){ await audio.resume(); isPlaying=true; startStopBtn.textContent='Parar'; scheduleTick(); } else{ isPlaying=false; startStopBtn.textContent='Iniciar'; clearTimeout(schedulerTimer); schedulerTimer=null; document.querySelectorAll('.step, .note-cell').forEach(s=>s.classList.remove('current')); currentStep=0; } });
 
-/* ------------------ Ritme: crear 8 files igual que abans ------------------ */
+/* ------------------ Ritme: crear 8 files ------------------ */
 const ritmeGrid = document.getElementById('ritmeGrid');
-const room = document.getElementById('ritmoView'); // for autoscroll targeting earlier behavior (ritmo room element)
-const rows = []; // each: {slotEl, stepEls, pattern, sound, gainNode, gainVal, volEl}
-
-const instrumentNames = { kick:'Kick', snare:'Snare', hihat:'HiHat', clap:'Clap' };
-const instrumentColorClass = { kick:'kick', snare:'snare', hihat:'hihat', clap:'clap' };
-
-function makeGain(val=1){ const g = audio.createGain(); g.gain.value = val; g.connect(audio.destination); return g; }
+const ritmeRoom = document.getElementById('ritmoView');
+const rows = [];
 
 function attachSlotDnD(slot, row){
   const getSound=(e)=> e.dataTransfer.getData('application/x-sound')||e.dataTransfer.getData('text/plain')||draggedSound;
@@ -240,9 +235,9 @@ function makeRitmeRow(){
 
 for(let i=0;i<8;i++){ const row = makeRitmeRow(); rows.push(row); if(i<7){ const d=document.createElement('div'); d.className='grid-row-divider'; ritmeGrid.appendChild(d); } }
 
-/* drag palette for ritme */
-let draggedSound = null;
-let isDraggingInstrument = false;
+/* ---------- drag palette (ara està a sobre del saló) ---------- */
+let draggedSound=null;
+let isDraggingInstrument=false;
 document.querySelectorAll('#palette .instrument').forEach(el=>{
   el.addEventListener('dragstart', e=>{
     draggedSound = el.dataset.sound;
@@ -256,195 +251,84 @@ document.querySelectorAll('#palette .instrument').forEach(el=>{
   el.addEventListener('dragend', ()=>{ draggedSound=null; isDraggingInstrument=false; document.querySelectorAll('.instrument.dragging').forEach(x=>x.classList.remove('dragging')); deactivateAutoScrollAndWheel(); });
 });
 
-/* --------- Ritme synths (simple) --------- */
-function playKick(time, gainNode){ const osc = audio.createOscillator(); const g = audio.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(150,time); osc.frequency.exponentialRampToValueAtTime(50,time+0.12); g.gain.setValueAtTime(1,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.22); osc.connect(g).connect(gainNode); osc.start(time); osc.stop(time+0.24); }
-function playSnare(time, gainNode){ const noiseBuf = audio.createBuffer(1,audio.sampleRate*0.2,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.6; const src=audio.createBufferSource(); src.buffer=noiseBuf; const band=audio.createBiquadFilter(); band.type='bandpass'; band.frequency.value=1800; const g=audio.createGain(); g.gain.setValueAtTime(0.8,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.18); src.connect(band).connect(g).connect(gainNode); src.start(time); src.stop(time+0.2); }
-function playHiHat(time, gainNode){ const noiseBuf = audio.createBuffer(1,audio.sampleRate*0.08,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.4; const src=audio.createBufferSource(); src.buffer=noiseBuf; const hp=audio.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=6000; const g=audio.createGain(); g.gain.setValueAtTime(0.5,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.08); src.connect(hp).connect(g).connect(gainNode); src.start(time); src.stop(time+0.1); }
-function playClap(time, gainNode){ const burst=(t, amp)=>{ const noiseBuf = audio.createBuffer(1,audio.sampleRate*0.06,audio.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.5; const src=audio.createBufferSource(); src.buffer=noiseBuf; const g=audio.createGain(); g.gain.setValueAtTime(amp,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.07); src.connect(g).connect(gainNode); src.start(t); src.stop(t+0.08); }; burst(time,0.6); burst(time+0.02,0.5); burst(time+0.04,0.4); }
-const synthByName = { kick: playKick, snare: playSnare, hihat: playHiHat, clap: playClap };
+/* ------------------ Ritme synth map ------------------ */
+const instrumentNames = { kick:'Kick', snare:'Snare', hihat:'HiHat', clap:'Clap' };
+const instrumentColorClass = { kick:'kick', snare:'snare', hihat:'hihat', clap:'clap' };
 
 /* ------------------ Melody sequencer ------------------ */
-const melPalette = document.getElementById('melPalette');
 const melInstLabel = document.getElementById('melInstLabel');
-let melInstrument = 'piano'; // default
+let melInstrument = 'piano';
 document.querySelectorAll('.mel-instr').forEach(el=>{
-  el.addEventListener('click', ()=> {
-    document.querySelectorAll('.mel-instr').forEach(x=>x.classList.remove('active'));
-    el.classList.add('active');
-    melInstrument = el.dataset.inst;
-    melInstLabel.textContent = el.textContent;
-  });
+  el.addEventListener('click', ()=>{ document.querySelectorAll('.mel-instr').forEach(x=>x.classList.remove('active')); el.classList.add('active'); melInstrument = el.dataset.inst; melInstLabel.textContent = el.textContent; });
 });
-// set default active
 document.querySelector('.mel-instr[data-inst="piano"]').classList.add('active');
 
 const pianoGrid = document.getElementById('pianoGrid');
-// We'll show 8 notes: MIDI 60..67 (C4..G#4) for simplicity
-const NOTES = [67,66,65,64,63,62,61,60]; // descending (top row highest pitch)
-const noteRows = []; // each: {note, elRow, pattern: [bool], gainNode}
+const NOTES = [67,66,65,64,63,62,61,60]; // C4..G4 descending
+const noteRows = [];
 function makeMelodyRow(midi){
   const rowWrap = document.createElement('div'); rowWrap.className='piano-row';
   const label = document.createElement('div'); label.className='note-label'; label.textContent = midiToNoteName(midi);
   const steps = document.createElement('div'); steps.className='note-steps';
-  const pattern = new Array(STEPS).fill(false);
-  const cells = [];
-  for(let i=0;i<STEPS;i++){
-    const c = document.createElement('div'); c.className='note-cell'; c.dataset.index=i;
-    c.addEventListener('click', ()=>{ pattern[i]=!pattern[i]; c.classList.toggle('active'); });
-    steps.appendChild(c); cells.push(c);
-  }
-  rowWrap.appendChild(label); rowWrap.appendChild(steps);
-  pianoGrid.appendChild(rowWrap);
+  const pattern = new Array(STEPS).fill(false); const cells = [];
+  for(let i=0;i<STEPS;i++){ const c=document.createElement('div'); c.className='note-cell'; c.dataset.index=i; c.addEventListener('click', ()=>{ pattern[i]=!pattern[i]; c.classList.toggle('active'); }); steps.appendChild(c); cells.push(c); }
+  rowWrap.appendChild(label); rowWrap.appendChild(steps); pianoGrid.appendChild(rowWrap);
   const r = { note: midi, elRow: rowWrap, pattern, cells, gainNode: makeGain(1) };
-  noteRows.push(r);
-  return r;
+  noteRows.push(r); return r;
 }
-function midiToNoteName(m){
-  const names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-  return names[m%12] + (Math.floor(m/12)-1);
-}
+function midiToNoteName(m){ const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; return names[m%12] + (Math.floor(m/12)-1); }
 NOTES.forEach(n=> makeMelodyRow(n));
 
-/* ------------------ Scheduler (plays both rhythm and melody) ------------------ */
+/* ------------------ Scheduler (ritme + melodia) ------------------ */
 function scheduleTick(){
-  const spb = 60 / bpm;
-  const stepDur = spb / 4;
-  const now = audio.currentTime;
-  // Ritme rows
-  rows.forEach(row=>{
-    row.stepEls.forEach((el,i)=> el.classList.toggle('current', i === currentStep));
-    if(row.sound && row.pattern[currentStep]){
-      const fn = synthByName[row.sound];
-      if(fn) fn(now + 0.02, row.gainNode);
-    }
-  });
-  // Melody rows
-  noteRows.forEach(r=>{
-    r.cells.forEach((el,i)=> el.classList.toggle('current', i === currentStep));
-    if(r.pattern[currentStep]){
-      playMelodyNote(now + 0.02, r.note, melInstrument, r.gainNode);
-    }
-  });
+  const spb = 60 / bpm; const stepDur = spb / 4; const now = audio.currentTime;
+  rows.forEach(row=>{ row.stepEls.forEach((el,i)=> el.classList.toggle('current', i===currentStep)); if(row.sound && row.pattern[currentStep]){ const fn = synthByName[row.sound]; if(fn) fn(now+0.02, row.gainNode); } });
+  noteRows.forEach(r=>{ r.cells.forEach((el,i)=> el.classList.toggle('current', i===currentStep)); if(r.pattern[currentStep]) playMelodyNote(now+0.02, r.note, melInstrument, r.gainNode); });
   currentStep = (currentStep + 1) % STEPS;
   schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
 }
 
-/* ------------------ Save / Load (serialize both rooms) ------------------ */
+/* ------------------ Save / Load for both rooms ------------------ */
 function serializeAll(){
-  return {
-    version:2,
-    steps: STEPS,
-    bpm,
-    rhythm: rows.map(r => ({ sound: r.sound || null, pattern: r.pattern.slice(), vol: r.gainVal ?? 1 })),
-    melody: { instrument: melInstrument, notes: noteRows.map(r=>({m: r.note, pattern: r.pattern.slice()})) }
-  };
+  return { version:2, steps:STEPS, bpm, rhythm: rows.map(r=>({ sound: r.sound||null, pattern: r.pattern.slice(), vol: r.gainVal ?? 1 })), melody: { instrument: melInstrument, notes: noteRows.map(r=>({ m: r.note, pattern: r.pattern.slice() })) } };
 }
 function applyAll(state){
   if(!state) return;
-  if(typeof state.bpm === 'number'){ bpm = state.bpm; bpmInput.value=bpm; bpmVal.textContent=bpm; }
-  if(Array.isArray(state.rhythm)){
-    // ensure counts: if payload has fewer than rows, only apply those; if more, ignore extras
-    state.rhythm.slice(0, rows.length).forEach((st, idx)=>{
-      const row = rows[idx];
-      row.sound = st.sound || null;
-      Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c));
-      if(st.sound){ row.slotEl.classList.add(instrumentColorClass[st.sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[st.sound] || st.sound; }
-      if(Array.isArray(st.pattern)){ st.pattern.forEach((v,i)=>{ row.pattern[i] = !!v; row.stepEls[i].classList.toggle('active', !!v); }); }
-      if(typeof st.vol === 'number'){ row.gainVal = st.vol; row.gainNode.gain.setValueAtTime(row.gainVal, audio.currentTime); row.volEl.value = Math.round(row.gainVal*100); }
-    });
-  }
-  if(state.melody && Array.isArray(state.melody.notes)){
-    if(typeof state.melody.instrument === 'string'){ melInstrument = state.melody.instrument; document.querySelectorAll('.mel-instr').forEach(x=>x.classList.remove('active')); const sel = document.querySelector('.mel-instr[data-inst="'+melInstrument+'"]'); if(sel) sel.classList.add('active'); melInstLabel.textContent = sel ? sel.textContent : melInstrument; }
-    state.melody.notes.slice(0, noteRows.length).forEach((n, idx)=>{ const row = noteRows[idx]; if(Array.isArray(n.pattern)){ n.pattern.forEach((v,i)=>{ row.pattern[i] = !!v; row.cells[i].classList.toggle('active', !!v); }); } });
-  }
+  if(typeof state.bpm==='number'){ bpm = state.bpm; bpmInput.value=bpm; bpmVal.textContent=bpm; }
+  if(Array.isArray(state.rhythm)){ state.rhythm.slice(0, rows.length).forEach((st, idx)=>{ const row = rows[idx]; row.sound = st.sound || null; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); if(st.sound){ row.slotEl.classList.add(instrumentColorClass[st.sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[st.sound] || st.sound; } if(Array.isArray(st.pattern)){ st.pattern.forEach((v,i)=>{ row.pattern[i] = !!v; row.stepEls[i].classList.toggle('active', !!v); }); } if(typeof st.vol==='number'){ row.gainVal = st.vol; row.gainNode.gain.setValueAtTime(row.gainVal, audio.currentTime); row.volEl.value = Math.round(row.gainVal*100); } }); }
+  if(state.melody && Array.isArray(state.melody.notes)){ if(typeof state.melody.instrument === 'string'){ melInstrument = state.melody.instrument; document.querySelectorAll('.mel-instr').forEach(x=>x.classList.remove('active')); const sel = document.querySelector('.mel-instr[data-inst="'+melInstrument+'"]'); if(sel) sel.classList.add('active'); melInstLabel.textContent = sel ? sel.textContent : melInstrument; } state.melody.notes.slice(0,noteRows.length).forEach((n, idx)=>{ const row = noteRows[idx]; if(Array.isArray(n.pattern)){ n.pattern.forEach((v,i)=>{ row.pattern[i] = !!v; row.cells[i].classList.toggle('active', !!v); }); } }); }
 }
 
-/* Save to file */
-document.getElementById('save').addEventListener('click', ()=>{
-  const payload = serializeAll();
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = `salon_full_${new Date().toISOString().replace(/[:.]/g,'-')}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-});
+/* Save file */
+document.getElementById('save').addEventListener('click', ()=>{ const payload = serializeAll(); const blob = new Blob([JSON.stringify(payload,null,2)], { type:'application/json' }); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`salon_full_${new Date().toISOString().replace(/[:.]/g,'-')}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); });
 
-/* Load from file */
+/* Load file */
 const fileInput = document.getElementById('fileInput');
 document.getElementById('load').addEventListener('click', ()=> fileInput.click());
-fileInput.addEventListener('change', async ()=>{
-  const f = fileInput.files[0]; if(!f) return;
-  try{
-    const text = await f.text(); const payload = JSON.parse(text);
-    applyAll(payload);
-    alert('Patró carregat.');
-  }catch(e){ alert('Error al carregar el fitxer.'); }
-  finally{ fileInput.value = ''; }
-});
+fileInput.addEventListener('change', async ()=>{ const f = fileInput.files[0]; if(!f) return; try{ const text = await f.text(); const payload = JSON.parse(text); applyAll(payload); alert('Patró carregat.'); }catch(e){ alert('Error al carregar el fitxer.'); } finally{ fileInput.value = ''; } });
 
 /* Clear */
-document.getElementById('clear').addEventListener('click', ()=>{
-  // clear rhythm
-  rows.forEach(r=>{ r.sound=null; Object.values(instrumentColorClass).forEach(c=>r.slotEl.classList.remove(c)); r.slotEl.classList.remove('filled'); r.slotEl.querySelector('.label').textContent='—'; r.pattern.fill(false); r.stepEls.forEach(el=>el.classList.remove('active','current')); r.gainVal=1; r.gainNode.gain.setValueAtTime(1,audio.currentTime); r.volEl.value=100; });
-  // clear melody
-  noteRows.forEach(r=>{ r.pattern.fill(false); r.cells.forEach(c=>c.classList.remove('active','current')); });
-});
+document.getElementById('clear').addEventListener('click', ()=>{ rows.forEach(r=>{ r.sound=null; Object.values(instrumentColorClass).forEach(c=>r.slotEl.classList.remove(c)); r.slotEl.classList.remove('filled'); r.slotEl.querySelector('.label').textContent='—'; r.pattern.fill(false); r.stepEls.forEach(el=>el.classList.remove('active','current')); r.gainVal=1; r.gainNode.gain.setValueAtTime(1,audio.currentTime); r.volEl.value=100; }); noteRows.forEach(r=>{ r.pattern.fill(false); r.cells.forEach(c=>c.classList.remove('active','current')); }); });
 
-/* ------------------ Tabs UI ------------------ */
-document.querySelectorAll('.tab').forEach(t=>{
-  t.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    const tab = t.dataset.tab;
-    document.getElementById('ritmoView').style.display = (tab==='ritmo') ? '' : 'none';
-    document.getElementById('melodiaView').style.display = (tab==='melodia') ? '' : 'none';
-  });
-});
+/* Tabs UI */
+document.querySelectorAll('.tab').forEach(t=>{ t.addEventListener('click', ()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); const tab = t.dataset.tab; document.getElementById('ritmoView').style.display = (tab==='ritmo') ? '' : 'none'; document.getElementById('melodiaView').style.display = (tab==='melodia') ? '' : 'none'; }); });
 
-/* ------------------ Autoscroll dins container per ritme (millorat) ------------------ */
-const ritmeRoom = document.getElementById('ritmoView');
+/* Autoscroll dins container (ritme) */
 let autoScrollInterval = null;
-function startAutoScroll(direction, speed = 8){
-  stopAutoScroll();
-  autoScrollInterval = setInterval(()=>{ ritmeRoom.scrollBy({ top: direction * speed, behavior: 'auto' }); }, 50);
-}
-function stopAutoScroll(){ if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval = null; } }
+function startAutoScroll(direction, speed=8){ stopAutoScroll(); autoScrollInterval = setInterval(()=>{ ritmeRoom.scrollBy({ top: direction * speed, behavior:'auto' }); },50); }
+function stopAutoScroll(){ if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval=null; } }
+function activateAutoScrollAndWheel(){ ritmeRoom.addEventListener('dragover', handleDragOver, { passive:false }); ritmeRoom.addEventListener('wheel', handleWheelWhileDragging, { passive:false }); }
+function deactivateAutoScrollAndWheel(){ ritmeRoom.removeEventListener('dragover', handleDragOver); ritmeRoom.removeEventListener('wheel', handleWheelWhileDragging); stopAutoScroll(); }
+function handleDragOver(e){ e.preventDefault(); const rect = ritmeRoom.getBoundingClientRect(); const y = e.clientY - rect.top; const margin = Math.min(120, rect.height * 0.2); if(y > rect.height - margin){ const intensity = (y - (rect.height - margin)) / margin; startAutoScroll(1, 6 + Math.round(intensity * 18)); } else if (y < margin){ const intensity = (margin - y) / margin; startAutoScroll(-1, 6 + Math.round(intensity * 18)); } else { stopAutoScroll(); } }
+function handleWheelWhileDragging(e){ if(!isDraggingInstrument) return; e.preventDefault(); ritmeRoom.scrollBy({ top: e.deltaY, left:0, behavior:'auto' }); }
 
-function activateAutoScrollAndWheel(){
-  ritmeRoom.addEventListener('dragover', handleDragOver, { passive:false });
-  ritmeRoom.addEventListener('wheel', handleWheelWhileDragging, { passive:false });
-}
-function deactivateAutoScrollAndWheel(){
-  ritmeRoom.removeEventListener('dragover', handleDragOver);
-  ritmeRoom.removeEventListener('wheel', handleWheelWhileDragging);
-  stopAutoScroll();
-}
-
-function handleDragOver(e){
-  e.preventDefault();
-  const rect = ritmeRoom.getBoundingClientRect();
-  const y = e.clientY - rect.top;
-  const margin = Math.min(120, rect.height * 0.2);
-  if(y > rect.height - margin){
-    const intensity = (y - (rect.height - margin)) / margin;
-    startAutoScroll(1, 6 + Math.round(intensity * 18));
-  } else if (y < margin){
-    const intensity = (margin - y) / margin;
-    startAutoScroll(-1, 6 + Math.round(intensity * 18));
-  } else { stopAutoScroll(); }
-}
-function handleWheelWhileDragging(e){
-  if(!isDraggingInstrument) return;
-  e.preventDefault();
-  ritmeRoom.scrollBy({ top: e.deltaY, left:0, behavior:'auto' });
-}
-
-/* ------------------ Init notes: optional preset ------------------ */
-// small demo pattern for rhythm and melody to show functionality (comment out if not wanted)
+/* Demo tiny presets (optional) */
 rows[0].pattern[0]=rows[0].stepEls[0].classList.add('active') && true;
 rows[0].pattern[8]=rows[0].stepEls[8].classList.add('active') && true;
 rows[1].pattern[4]=rows[1].stepEls[4].classList.add('active') && true;
 noteRows[0].pattern[0]=noteRows[0].cells[0].classList.add('active') && true;
 
-/* ------------------ Done ------------------ */
+/* Done */
 </script>
 </body>
 </html>
