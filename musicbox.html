@@ -51,7 +51,7 @@
     }
     .slot.filled { border-style:solid; border-color:#aeb4c2; color:#eaeaea; }
     .slot.drag-over { border-color:var(--accent); box-shadow:0 0 0 3px #ffd45e55; }
-    .slot .label { font-weight:600; font-size:12px; text-align:center; line-height:1.1; }
+    .slot .label { font-weight:600; font-size:12px; text-align:center; line-height:1.1; pointer-events:none; }
 
     /* 32 passos */
     .steps {
@@ -75,6 +75,9 @@
     #legend { display:flex; gap:12px; align-items:center; color:#aeb4c2; font-size:12px; padding:0 20px 16px; }
     #legend span { display:inline-flex; align-items:center; gap:6px; }
     .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+
+    /* Feedback arrossegant */
+    .instrument.dragging { opacity:0.85; }
   </style>
 </head>
 <body>
@@ -105,6 +108,7 @@
   </div>
 
   <script>
+    // Audio
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     const audio = new AudioCtx();
 
@@ -158,6 +162,7 @@
     }
     const synthByName = { kick: playKick, snare: playSnare, hihat: playHiHat, clap: playClap };
 
+    // Estat
     const STEPS = 32;
     let bpm = 100;
     let isPlaying = false;
@@ -187,17 +192,56 @@
     document.querySelectorAll('.instrument').forEach(el => {
       el.addEventListener('dragstart', e => {
         draggedSound = el.dataset.sound;
-        e.dataTransfer.setData('text/plain', draggedSound);
         e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('application/x-sound', draggedSound); // tipus propi
+        e.dataTransfer.setData('text/plain', draggedSound);          // fallback
+        el.classList.add('dragging');
       });
-      el.addEventListener('dragend', () => { draggedSound = null; });
+      el.addEventListener('dragend', () => {
+        draggedSound = null;
+        el.classList.remove('dragging');
+      });
     });
 
     // Graella i files
     const grid = document.getElementById("grid");
     const rows = []; // { slotEl, pattern:Array<bool>, stepEls:[], sound:string|null }
-
     const instrumentNames = { kick: "Kick", snare: "Snare", hihat: "HiHat", clap: "Clap" };
+
+    function attachSlotDnD(slot, row) {
+      const getSoundFromEvent = (e) =>
+        e.dataTransfer.getData('application/x-sound') ||
+        e.dataTransfer.getData('text/plain') ||
+        draggedSound;
+
+      slot.addEventListener('dragenter', e => {
+        e.preventDefault(); e.stopPropagation();
+        slot.classList.add('drag-over');
+      });
+
+      slot.addEventListener('dragover', e => {
+        e.preventDefault(); e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy';
+        slot.classList.add('drag-over');
+      });
+
+      slot.addEventListener('dragleave', e => {
+        e.stopPropagation();
+        slot.classList.remove('drag-over');
+      });
+
+      slot.addEventListener('drop', e => {
+        e.preventDefault(); e.stopPropagation();
+        const targetSlot = e.target.closest('.slot');
+        if (!targetSlot) return;
+        slot.classList.remove('drag-over');
+        const sound = getSoundFromEvent(e);
+        if (!sound) return;
+        row.sound = sound;
+        slot.classList.add("filled");
+        slot.querySelector('.label').textContent = instrumentNames[sound];
+      });
+    }
 
     function makeRow() {
       const slot = document.createElement("div");
@@ -220,30 +264,12 @@
         stepEls.push(cell);
       }
 
-      // Drop target
-      slot.addEventListener("dragover", e => { e.preventDefault(); slot.classList.add('drag-over'); });
-      slot.addEventListener("dragleave", () => slot.classList.remove('drag-over'));
-      slot.addEventListener("drop", e => {
-        e.preventDefault();
-        slot.classList.remove('drag-over');
-        const sound = e.dataTransfer.getData('text/plain') || draggedSound;
-        if (!sound) return;
-        row.sound = sound;
-        slot.classList.add("filled");
-        slot.querySelector('.label').textContent = instrumentNames[sound];
-      });
-
-      // Doble clic: buidar
-      slot.addEventListener("dblclick", () => {
-        row.sound = null;
-        slot.classList.remove("filled");
-        slot.querySelector('.label').textContent = "—";
-      });
+      const row = { slotEl: slot, pattern, stepEls, sound: null };
+      attachSlotDnD(slot, row);
 
       grid.appendChild(slot);
       grid.appendChild(steps);
-
-      return { slotEl: slot, pattern, stepEls, sound: null };
+      return row;
     }
 
     for (let r=0; r<4; r++) {
