@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Salón de Ritmos — 8 files</title>
+  <title>Salón de Ritmos — autoscroll mentre arrossegues</title>
   <style>
     :root{
       --bg:#1e1f24; --panel:#2b2f39; --room:#2b2f39; --text:#eaeaea;
@@ -23,8 +23,8 @@
     .instrument[data-sound="snare"]{background:var(--snare)}
     .instrument[data-sound="hihat"]{background:var(--hihat);color:#111}
     .instrument[data-sound="clap"]{background:var(--clap)}
-    #room{background:var(--room);margin:0 20px 20px;border-radius:12px;padding:16px;box-shadow:inset 0 0 0 1px var(--line)}
-    .grid{display:grid;grid-template-columns:96px 1fr;gap:14px 16px;align-items:center}
+    #room{background:var(--room);margin:0 20px 20px;border-radius:12px;padding:16px;box-shadow:inset 0 0 0 1px var(--line); max-height:60vh; overflow:auto}
+    .grid{display:grid;grid-template-columns:96px 1fr;gap:14px 16px;align-items:center; padding-bottom:12px}
     .slot{width:64px;height:64px;border-radius:50%;border:2px dashed #7c8291;background:transparent;display:flex;align-items:center;justify-content:center;color:#aeb4c2;font-size:12px;user-select:none;transition:border-color 120ms,box-shadow 120ms,background 160ms}
     .slot .label{pointer-events:none;font-weight:700;text-align:center}
     .slot.filled{color:#111}
@@ -50,7 +50,7 @@
 </head>
 <body>
   <header>
-    <h1>Salón de Ritmos — 8 files</h1>
+    <h1>Salón de Ritmos — autoscroll</h1>
     <div id="controls">
       <button id="startStop">Iniciar</button>
       <label>BPM <input id="bpm" type="range" min="50" max="200" value="100"/></label>
@@ -102,10 +102,29 @@
 
     // Paleta DnD
     let draggedSound = null;
-    document.querySelectorAll('.instrument').forEach(el=>{ el.addEventListener('dragstart', e=>{ draggedSound = el.dataset.sound; e.dataTransfer.effectAllowed='copy'; e.dataTransfer.setData('application/x-sound', draggedSound); e.dataTransfer.setData('text/plain', draggedSound); el.classList.add('dragging'); }); el.addEventListener('dragend', ()=>{ draggedSound=null; el.classList.remove('dragging'); }); });
+    let isDraggingInstrument = false;
+    document.querySelectorAll('.instrument').forEach(el=>{
+      el.addEventListener('dragstart', e=>{
+        draggedSound = el.dataset.sound;
+        isDraggingInstrument = true;
+        e.dataTransfer.effectAllowed='copy';
+        e.dataTransfer.setData('application/x-sound', draggedSound);
+        e.dataTransfer.setData('text/plain', draggedSound);
+        el.classList.add('dragging');
+        // activar listeners globals per a autoscroll i wheel
+        activateAutoScrollAndWheel();
+      });
+      el.addEventListener('dragend', ()=>{
+        draggedSound = null;
+        isDraggingInstrument = false;
+        el.classList.remove('dragging');
+        deactivateAutoScrollAndWheel();
+      });
+    });
 
     // Graella i files
     const grid = document.getElementById('grid');
+    const room = document.getElementById('room');
     const rows = []; // {slotEl, controlsEl, stepEls, pattern, sound, gainNode, gainVal, volEl}
     const instrumentNames = { kick:'Kick', snare:'Snare', hihat:'HiHat', clap:'Clap' };
     const instrumentColorClass = { kick:'kick', snare:'snare', hihat:'hihat', clap:'clap' };
@@ -143,46 +162,86 @@
     createInitialRows(8);
 
     // Scheduler
-    function scheduleTick(){
-      const spb = 60 / bpm; const stepDur = spb / 4; const now = audio.currentTime;
+    function scheduleTick(){ const spb = 60 / bpm; const stepDur = spb / 4; const now = audio.currentTime;
       rows.forEach(row=>{ row.stepEls.forEach((el,i)=> el.classList.toggle('current', i===currentStep)); if(row.sound && row.pattern[currentStep]){ const fn = synthByName[row.sound]; if(fn) fn(now+0.02, row.gainNode); } });
       currentStep = (currentStep + 1) % STEPS;
       schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
     }
 
-    // Serialitzar / aplicar estat
+    // Serialize / apply state
     function serializeRows(){ return rows.map(r => ({ sound: r.sound || null, pattern: r.pattern.slice(), vol: r.gainVal ?? 1 })); }
     function applyRowsState(state){
-      // Si payload té més files, ignorarà l'excés; si té menys, manté les restants netes
       rows.forEach(row=>{ row.sound=null; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); row.slotEl.classList.remove('filled'); row.slotEl.querySelector('.label').textContent='—'; row.pattern.fill(false); row.stepEls.forEach(el=>el.classList.remove('active','current')); row.gainVal=1; row.gainNode.gain.setValueAtTime(1,audio.currentTime); row.volEl.value=100; });
       state.slice(0, rows.length).forEach((st, idx)=>{ const row = rows[idx]; if(st.sound){ row.sound = st.sound; row.slotEl.classList.add(instrumentColorClass[st.sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[st.sound] || st.sound; } if(Array.isArray(st.pattern)){ st.pattern.forEach((p,i)=>{ row.pattern[i] = !!p; row.stepEls[i].classList.toggle('active', !!p); }); } if(typeof st.vol === 'number'){ row.gainVal = st.vol; row.gainNode.gain.setValueAtTime(row.gainVal,audio.currentTime); row.volEl.value = Math.round(row.gainVal*100); } });
     }
 
-    // Net, guardar (descarregar), carregar (fitxer)
+    // Clear / Save / Load
     document.getElementById('clear').addEventListener('click', ()=> applyRowsState(rows.map(()=>({ sound:null, pattern:new Array(STEPS).fill(false), vol:1 }))));
 
     document.getElementById('save').addEventListener('click', ()=>{
       const payload = { version:2, steps:STEPS, bpm, rows: serializeRows() };
       const blob = new Blob([JSON.stringify(payload,null,2)], { type:'application/json' });
-      const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`salon_ritmos_${new Date().toISOString().replace(/[:.]/g,'-')}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href = url; a.download = `salon_ritmos_${new Date().toISOString().replace(/[:.]/g,'-')}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     });
 
     const fileInput = document.getElementById('fileInput');
     document.getElementById('load').addEventListener('click', ()=> fileInput.click());
     fileInput.addEventListener('change', async ()=>{
       const f = fileInput.files[0]; if(!f) return;
-      try{
-        const text = await f.text(); const payload = JSON.parse(text);
-        if(!payload || !Array.isArray(payload.rows)) throw new Error('Formato inválido');
-        if(payload.steps && payload.steps !== STEPS){
-          payload.rows.forEach(r=>{ const arr = new Array(STEPS).fill(false); for(let i=0;i<Math.min(STEPS, r.pattern.length); i++) arr[i]=!!r.pattern[i]; r.pattern = arr; });
-        }
+      try{ const text = await f.text(); const payload = JSON.parse(text); if(!payload || !Array.isArray(payload.rows)) throw new Error('Formato inválido');
+        if(payload.steps && payload.steps !== STEPS){ payload.rows.forEach(r=>{ const arr = new Array(STEPS).fill(false); for(let i=0;i<Math.min(STEPS, r.pattern.length); i++) arr[i]=!!r.pattern[i]; r.pattern = arr; }); }
         applyRowsState(payload.rows);
         if(typeof payload.bpm === 'number'){ bpm = payload.bpm; bpmInput.value = bpm; bpmVal.textContent = bpm; }
         alert('Patró carregat.');
-      }catch(e){ alert('Error en carregar el JSON.'); }
-      finally{ fileInput.value = ''; }
+      }catch(e){ alert('Error en carregar el JSON.'); } finally{ fileInput.value = ''; }
     });
+
+    // ------------------ Autoscroll mentre arrossegues ------------------
+    // Funció que fa autoscroll si el punter està prop de la vora del container (room).
+    let autoScrollInterval = null;
+    function startAutoScroll(direction, speed=8){
+      stopAutoScroll();
+      autoScrollInterval = setInterval(()=>{ room.scrollBy({ top: direction * speed, behavior: 'auto' }); }, 50);
+    }
+    function stopAutoScroll(){ if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval = null; } }
+
+    function activateAutoScrollAndWheel(){
+      // mousemove per detectar posició i iniciar autoscroll
+      window.addEventListener('dragover', handleDragOver, { passive:false });
+      // permet usar roda del ratolí per fer scroll mentre està arrossegant
+      window.addEventListener('wheel', handleWheelWhileDragging, { passive:false });
+    }
+    function deactivateAutoScrollAndWheel(){
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('wheel', handleWheelWhileDragging);
+      stopAutoScroll();
+    }
+
+    function handleDragOver(e){
+      // mantenim preventDefault perquè el drop funcioni i per controlar el scroll
+      e.preventDefault();
+      const rect = room.getBoundingClientRect();
+      const margin = 80; // zona a partir de la qual s'activa l'autoscroll
+      if(e.clientY > rect.bottom - margin){
+        // a prop de la vora inferior -> baixar
+        startAutoScroll(1, Math.min(20, Math.max(6, (e.clientY - (rect.bottom - margin))/4)));
+      } else if(e.clientY < rect.top + margin){
+        // a prop de la vora superior -> pujar
+        startAutoScroll(-1, Math.min(20, Math.max(6, ((rect.top + margin) - e.clientY)/4)));
+      } else {
+        stopAutoScroll();
+      }
+    }
+
+    function handleWheelWhileDragging(e){
+      if(!isDraggingInstrument) return;
+      // deixem que la roda mogui la sala encara que estiguis arrossegant
+      e.preventDefault();
+      // scroll local del container
+      room.scrollBy({ top: e.deltaY, left: 0, behavior: 'auto' });
+    }
+
+    // ------------------ Fi autoscroll ------------------
 
     // Tot llest
   </script>
