@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="ca">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Salón de Ritmos — volum i colors</title>
+  <title>Salón de Ritmos — files dinàmiques</title>
   <style>
     :root{
       --bg:#1e1f24; --panel:#2b2f39; --room:#2b2f39; --text:#eaeaea;
@@ -16,7 +16,6 @@
     header h1{margin:0;font-size:18px}
     #controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     #controls button,#controls input{background:var(--panel);color:var(--text);border:1px solid var(--line);padding:8px 10px;border-radius:8px}
-    #controls input[type="range"]{width:140px}
     #palette{display:flex;gap:12px;align-items:center;padding:12px 20px;margin:0 20px 12px}
     .instrument{display:flex;align-items:center;justify-content:center;width:84px;height:56px;border-radius:10px;user-select:none;cursor:grab;border:1px solid var(--line);font-weight:700}
     .instrument[data-sound="kick"]{background:var(--kick)}
@@ -25,15 +24,14 @@
     .instrument[data-sound="clap"]{background:var(--clap)}
     #room{background:var(--room);margin:0 20px 20px;border-radius:12px;padding:16px;box-shadow:inset 0 0 0 1px var(--line)}
     .grid{display:grid;grid-template-columns:96px 1fr;gap:14px 16px;align-items:center}
-    .row{display:contents}
     .slot{width:64px;height:64px;border-radius:50%;border:2px dashed #7c8291;background:transparent;display:flex;align-items:center;justify-content:center;color:#aeb4c2;font-size:12px;user-select:none;transition:border-color 120ms,box-shadow 120ms,background 160ms}
     .slot .label{pointer-events:none;font-weight:700;text-align:center}
-    .slot.filled{border-style:solid;color:#111}
+    .slot.filled{color:#111}
     .slot.drag-over{border-color:var(--accent);box-shadow:0 0 0 6px #ffd45e33}
-    .slot.kick{background:linear-gradient(0deg,#fff0 0%, #fff0 50%);border-color:var(--kick)}
-    .slot.snare{background:linear-gradient(0deg,#fff0 0%, #fff0 50%);border-color:var(--snare)}
-    .slot.hihat{background:linear-gradient(0deg,#fff0 0%, #fff0 50%);border-color:var(--hihat)}
-    .slot.clap{background:linear-gradient(0deg,#fff0 0%, #fff0 50%);border-color:var(--clap)}
+    .slot.kick{border-color:var(--kick)}
+    .slot.snare{border-color:var(--snare)}
+    .slot.hihat{border-color:var(--hihat)}
+    .slot.clap{border-color:var(--clap)}
     .steps{display:grid;grid-template-columns:repeat(32,22px);gap:6px;align-items:center}
     .step{width:22px;height:22px;border-radius:6px;background:var(--off);cursor:pointer;border:1px solid var(--line);transition:transform 80ms,background 120ms}
     .step:hover{transform:scale(1.06)}
@@ -46,16 +44,12 @@
     #legend{display:flex;gap:12px;align-items:center;color:#aeb4c2;font-size:12px;padding:0 20px 12px}
     .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
     .instrument.dragging{opacity:.8}
-    @media (max-width:720px){
-      .grid{grid-template-columns:76px 1fr}
-      .instrument{width:72px;height:48px}
-      .slot{width:56px;height:56px}
-    }
+    @media (max-width:720px){ .grid{grid-template-columns:76px 1fr} .instrument{width:72px;height:48px} .slot{width:56px;height:56px} }
   </style>
 </head>
 <body>
   <header>
-    <h1>Salón de Ritmos — volum i colors</h1>
+    <h1>Salón de Ritmos — files dinàmiques</h1>
     <div id="controls">
       <button id="startStop">Iniciar</button>
       <label>BPM <input id="bpm" type="range" min="50" max="200" value="100"/></label>
@@ -63,6 +57,8 @@
       <button id="clear">Limpiar salón</button>
       <button id="save">Guardar patrón</button>
       <button id="load">Cargar patrón</button>
+      <button id="add2">+2 files</button>
+      <button id="add3">+3 files</button>
       <input id="fileInput" type="file" accept="application/json" style="display:none" />
     </div>
   </header>
@@ -85,38 +81,18 @@
   </div>
 
   <script>
-    // WebAudio i síntesis simple amb guany per fila
+    // Audio i síntesis
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     const audio = new AudioCtx();
+    function makeGain(g=1){ const n=audio.createGain(); n.gain.value=g; n.connect(audio.destination); return n; }
 
-    function makeGain(gainVal=1){ const g = audio.createGain(); g.gain.value = gainVal; g.connect(audio.destination); return g; }
-
-    function playKick(time, gainNode){ const osc = audio.createOscillator(); const g = audio.createGain();
-      osc.type = "sine"; osc.frequency.setValueAtTime(150,time); osc.frequency.exponentialRampToValueAtTime(50,time+0.12);
-      g.gain.setValueAtTime(1,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.22);
-      osc.connect(g).connect(gainNode); osc.start(time); osc.stop(time+0.24);
-    }
-    function playSnare(time, gainNode){ const noiseBuf=audio.createBuffer(1,audio.sampleRate*0.2,audio.sampleRate); const d=noiseBuf.getChannelData(0);
-      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.6; const src=audio.createBufferSource(); src.buffer=noiseBuf;
-      const band=audio.createBiquadFilter(); band.type="bandpass"; band.frequency.value=1800;
-      const g=audio.createGain(); g.gain.setValueAtTime(0.8,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.18);
-      src.connect(band).connect(g).connect(gainNode); src.start(time); src.stop(time+0.2);
-    }
-    function playHiHat(time, gainNode){ const noiseBuf=audio.createBuffer(1,audio.sampleRate*0.08,audio.sampleRate); const d=noiseBuf.getChannelData(0);
-      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.4; const src=audio.createBufferSource(); src.buffer=noiseBuf;
-      const hp=audio.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000;
-      const g=audio.createGain(); g.gain.setValueAtTime(0.5,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.08);
-      src.connect(hp).connect(g).connect(gainNode); src.start(time); src.stop(time+0.1);
-    }
-    function playClap(time, gainNode){ const burst=(t,amp)=>{ const noiseBuf=audio.createBuffer(1,audio.sampleRate*0.06,audio.sampleRate); const d=noiseBuf.getChannelData(0);
-      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.5; const src=audio.createBufferSource(); src.buffer=noiseBuf;
-      const g=audio.createGain(); g.gain.setValueAtTime(amp,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.07);
-      src.connect(g).connect(gainNode); src.start(t); src.stop(t+0.08);
-    }; burst(time,0.6); burst(time+0.02,0.5); burst(time+0.04,0.4); }
-
+    function playKick(time, gainNode){ const osc=audio.createOscillator(); const g=audio.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(150,time); osc.frequency.exponentialRampToValueAtTime(50,time+0.12); g.gain.setValueAtTime(1,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.22); osc.connect(g).connect(gainNode); osc.start(time); osc.stop(time+0.24); }
+    function playSnare(time, gainNode){ const buf=audio.createBuffer(1,audio.sampleRate*0.2,audio.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.6; const src=audio.createBufferSource(); src.buffer=buf; const band=audio.createBiquadFilter(); band.type='bandpass'; band.frequency.value=1800; const g=audio.createGain(); g.gain.setValueAtTime(0.8,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.18); src.connect(band).connect(g).connect(gainNode); src.start(time); src.stop(time+0.2); }
+    function playHiHat(time, gainNode){ const buf=audio.createBuffer(1,audio.sampleRate*0.08,audio.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.4; const src=audio.createBufferSource(); src.buffer=buf; const hp=audio.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=6000; const g=audio.createGain(); g.gain.setValueAtTime(0.5,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.08); src.connect(hp).connect(g).connect(gainNode); src.start(time); src.stop(time+0.1); }
+    function playClap(time, gainNode){ const burst=(t,a)=>{ const buf=audio.createBuffer(1,audio.sampleRate*0.06,audio.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.5; const s=audio.createBufferSource(); s.buffer=buf; const g=audio.createGain(); g.gain.setValueAtTime(a,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.07); s.connect(g).connect(gainNode); s.start(t); s.stop(t+0.08); }; burst(time,0.6); burst(time+0.02,0.5); burst(time+0.04,0.4); }
     const synthByName = { kick: playKick, snare: playSnare, hihat: playHiHat, clap: playClap };
 
-    // Estat global
+    // Estat
     const STEPS = 32;
     let bpm = 100, isPlaying = false, schedulerTimer = null, currentStep = 0;
     const bpmInput = document.getElementById('bpm'), bpmVal = document.getElementById('bpmVal');
@@ -131,20 +107,13 @@
     // Paleta DnD
     let draggedSound = null;
     document.querySelectorAll('.instrument').forEach(el=>{
-      el.addEventListener('dragstart', e=>{
-        draggedSound = el.dataset.sound;
-        e.dataTransfer.effectAllowed='copy';
-        e.dataTransfer.setData('application/x-sound', draggedSound);
-        e.dataTransfer.setData('text/plain', draggedSound);
-        el.classList.add('dragging');
-      });
+      el.addEventListener('dragstart', e=>{ draggedSound = el.dataset.sound; e.dataTransfer.effectAllowed='copy'; e.dataTransfer.setData('application/x-sound', draggedSound); e.dataTransfer.setData('text/plain', draggedSound); el.classList.add('dragging'); });
       el.addEventListener('dragend', ()=>{ draggedSound=null; el.classList.remove('dragging'); });
     });
 
-    // Construcció graella
+    // Graella i files
     const grid = document.getElementById('grid');
-    const rows = []; // { slotEl, stepEls, pattern, sound, gainNode, gainVal, volEl }
-
+    const rows = []; // {slotEl, controlsEl, stepEls, pattern, sound, gainNode, gainVal, volEl}
     const instrumentNames = { kick:'Kick', snare:'Snare', hihat:'HiHat', clap:'Clap' };
     const instrumentColorClass = { kick:'kick', snare:'snare', hihat:'hihat', clap:'clap' };
 
@@ -153,128 +122,75 @@
       slot.addEventListener('dragenter', e=>{ e.preventDefault(); e.stopPropagation(); slot.classList.add('drag-over'); });
       slot.addEventListener('dragover', e=>{ e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect='copy'; slot.classList.add('drag-over'); });
       slot.addEventListener('dragleave', e=>{ e.stopPropagation(); slot.classList.remove('drag-over'); });
-      slot.addEventListener('drop', e=>{ e.preventDefault(); e.stopPropagation(); slot.classList.remove('drag-over');
-        const target = e.target.closest('.slot'); if(!target) return;
-        const sound = getSound(e); if(!sound) return;
-        row.sound = sound;
-        // aplica color/classe
-        Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c));
-        row.slotEl.classList.add(instrumentColorClass[sound]);
-        row.slotEl.classList.add('filled');
-        row.slotEl.querySelector('.label').textContent = instrumentNames[sound];
-      });
-      slot.addEventListener('dblclick', ()=>{ // buidar
-        row.sound = null;
-        Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c));
-        row.slotEl.classList.remove('filled');
-        row.slotEl.querySelector('.label').textContent = '—';
-      });
+      slot.addEventListener('drop', e=>{ e.preventDefault(); e.stopPropagation(); slot.classList.remove('drag-over'); const target = e.target.closest('.slot'); if(!target) return; const sound = getSound(e); if(!sound) return; row.sound = sound; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); row.slotEl.classList.add(instrumentColorClass[sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[sound]; });
+      slot.addEventListener('dblclick', ()=>{ row.sound = null; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); row.slotEl.classList.remove('filled'); row.slotEl.querySelector('.label').textContent = '—'; });
     }
 
     function makeRow(){
-      const slot = document.createElement('div'); slot.className='slot'; slot.innerHTML = '<div class="label">—</div>';
+      const slot = document.createElement('div'); slot.className='slot'; slot.innerHTML='<div class="label">—</div>';
       const steps = document.createElement('div'); steps.className='steps';
-      const pattern = new Array(STEPS).fill(false);
-      const stepEls = [];
-      for(let i=0;i<STEPS;i++){
-        const cell = document.createElement('div'); cell.className='step'; cell.dataset.index = i;
-        cell.addEventListener('click', ()=>{ pattern[i] = !pattern[i]; cell.classList.toggle('active'); });
-        steps.appendChild(cell); stepEls.push(cell);
-      }
+      const pattern = new Array(STEPS).fill(false); const stepEls = [];
+      for(let i=0;i<STEPS;i++){ const cell=document.createElement('div'); cell.className='step'; cell.dataset.index=i; cell.addEventListener('click', ()=>{ pattern[i]=!pattern[i]; cell.classList.toggle('active'); }); steps.appendChild(cell); stepEls.push(cell); }
 
-      // controls addicionals: volum
       const controlsWrap = document.createElement('div'); controlsWrap.className='controls-row';
       const volWrap = document.createElement('div'); volWrap.className='vol-wrap';
       const volLabel = document.createElement('span'); volLabel.textContent='Vol'; volLabel.style.color='#aeb4c2'; volLabel.style.fontSize='12px';
       const volIn = document.createElement('input'); volIn.type='range'; volIn.min='0'; volIn.max='200'; volIn.value='100';
+      const row = { slotEl: slot, controlsEl: controlsWrap, stepEls, pattern, sound:null, gainNode: makeGain(1), gainVal:1, volEl: volIn };
       volIn.addEventListener('input', ()=>{ row.gainVal = parseInt(volIn.value,10)/100; if(row.gainNode) row.gainNode.gain.setValueAtTime(row.gainVal, audio.currentTime); });
-      volWrap.appendChild(volLabel); volWrap.appendChild(volIn);
-      controlsWrap.appendChild(volWrap);
+      volWrap.appendChild(volLabel); volWrap.appendChild(volIn); controlsWrap.appendChild(volWrap);
 
-      // append a grid: slot, controls fila (encaixem dins la mateixa primera columna), steps a la dreta
-      // per senzillesa, col·loquem controls després del slot en la mateixa primera columna
-      grid.appendChild(slot);
-      // creem un wrapper per a controls (per ocupar la mateixa columna que el slot)
-      grid.appendChild(controlsWrap);
-      grid.appendChild(steps);
-
-      const row = { slotEl: slot, controlsEl: controlsWrap, stepEls, pattern, sound: null, gainNode: makeGain(1), gainVal:1, volEl: volIn };
+      grid.appendChild(slot); grid.appendChild(controlsWrap); grid.appendChild(steps);
       attachSlotDnD(slot, row);
       return row;
     }
 
-    // Fem 4 files (cada fila ocupa 3 columnes: slot, controls, steps)
-    for(let r=0;r<4;r++){
-      // Cada iteració ja afegeix 3 nodes: slot, controlsWrap, steps
-      const row = makeRow();
-      rows.push(row);
-      if(r < 3){ const divider = document.createElement('div'); divider.className='grid-row-divider'; grid.appendChild(divider); }
-    }
+    // crear 4 files inicials
+    function createInitialRows(n=4){ for(let i=0;i<n;i++){ const row=makeRow(); rows.push(row); if(i < n-1){ const d=document.createElement('div'); d.className='grid-row-divider'; grid.appendChild(d); } } }
+    createInitialRows(4);
 
-    // Scheduler (simple setTimeout per compatibilitat)
+    // afegir files dinàmicament
+    function addRows(n){
+      // abans d'afegir, elimina el divisor final si existeix
+      const lastChild = grid.lastElementChild;
+      if(lastChild && lastChild.classList.contains('grid-row-divider')) lastChild.remove();
+      for(let i=0;i<n;i++){
+        const row = makeRow();
+        rows.push(row);
+        // afegim divisor després de cada nova fila excepte l'última
+        const divider = document.createElement('div'); divider.className='grid-row-divider'; grid.appendChild(divider);
+      }
+    }
+    document.getElementById('add2').addEventListener('click', ()=> addRows(2));
+    document.getElementById('add3').addEventListener('click', ()=> addRows(3));
+
+    // Scheduler
     function scheduleTick(){
-      const spb = 60 / bpm;
-      const stepDur = spb / 4;
-      const now = audio.currentTime;
-      rows.forEach(row=>{
-        row.stepEls.forEach((el,i)=> el.classList.toggle('current', i === currentStep));
-        if(row.sound && row.pattern[currentStep]){
-          const fn = synthByName[row.sound];
-          if(fn){
-            // enviar el seu gainNode
-            fn(now + 0.02, row.gainNode);
-          }
-        }
-      });
+      const spb = 60 / bpm; const stepDur = spb / 4; const now = audio.currentTime;
+      rows.forEach(row=>{ row.stepEls.forEach((el,i)=> el.classList.toggle('current', i===currentStep)); if(row.sound && row.pattern[currentStep]){ const fn = synthByName[row.sound]; if(fn) fn(now+0.02, row.gainNode); } });
       currentStep = (currentStep + 1) % STEPS;
       schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
     }
 
-    // Serialize / apply state
-    function serializeRows(){
-      return rows.map(r => ({ sound: r.sound || null, pattern: r.pattern.slice(), vol: r.gainVal ?? 1 }));
-    }
+    // serialitzar / aplicar estat (inclou files afegides)
+    function serializeRows(){ return rows.map(r => ({ sound: r.sound || null, pattern: r.pattern.slice(), vol: r.gainVal ?? 1 })); }
     function applyRowsState(state){
-      // netejar visual
-      rows.forEach(row=>{
-        row.sound = null;
-        Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c));
-        row.slotEl.classList.remove('filled');
-        row.slotEl.querySelector('.label').textContent = '—';
-        row.pattern.fill(false);
-        row.stepEls.forEach(el=>el.classList.remove('active','current'));
-        // reset volum
-        row.gainVal = 1; row.gainNode.gain.setValueAtTime(1, audio.currentTime);
-        row.volEl.value = 100;
-      });
-      state.slice(0, rows.length).forEach((st, idx)=>{
-        const row = rows[idx];
-        if(st.sound){
-          row.sound = st.sound;
-          row.slotEl.classList.add(instrumentColorClass[st.sound]);
-          row.slotEl.classList.add('filled');
-          row.slotEl.querySelector('.label').textContent = instrumentNames[st.sound] || st.sound;
-        }
-        if(Array.isArray(st.pattern)){
-          st.pattern.forEach((p,i)=>{ row.pattern[i] = !!p; row.stepEls[i].classList.toggle('active', !!p); });
-        }
-        if(typeof st.vol === 'number'){ row.gainVal = st.vol; row.gainNode.gain.setValueAtTime(row.gainVal, audio.currentTime); row.volEl.value = Math.round(row.gainVal*100); }
-      });
+      // netejar tots i actualitzar segons payload; si cal, afegir files per encaixar length
+      // si payload té més files que les actuals, afegim files extra
+      if(state.length > rows.length){
+        addRows(state.length - rows.length);
+      }
+      rows.forEach(row=>{ row.sound=null; Object.values(instrumentColorClass).forEach(c=>row.slotEl.classList.remove(c)); row.slotEl.classList.remove('filled'); row.slotEl.querySelector('.label').textContent='—'; row.pattern.fill(false); row.stepEls.forEach(el=>el.classList.remove('active','current')); row.gainVal=1; row.gainNode.gain.setValueAtTime(1,audio.currentTime); row.volEl.value=100; });
+      state.slice(0, rows.length).forEach((st, idx)=>{ const row = rows[idx]; if(st.sound){ row.sound = st.sound; row.slotEl.classList.add(instrumentColorClass[st.sound]); row.slotEl.classList.add('filled'); row.slotEl.querySelector('.label').textContent = instrumentNames[st.sound] || st.sound; } if(Array.isArray(st.pattern)){ st.pattern.forEach((p,i)=>{ row.pattern[i] = !!p; row.stepEls[i].classList.toggle('active', !!p); }); } if(typeof st.vol === 'number'){ row.gainVal = st.vol; row.gainNode.gain.setValueAtTime(row.gainVal,audio.currentTime); row.volEl.value = Math.round(row.gainVal*100); } });
     }
 
-    // Clear, save (download), load (file)
-    document.getElementById('clear').addEventListener('click', ()=>{
-      applyRowsState(rows.map(()=>({ sound:null, pattern:new Array(STEPS).fill(false), vol:1 })));
-    });
+    // netejar, desar (descàrrega) i carregar (fitxer)
+    document.getElementById('clear').addEventListener('click', ()=> applyRowsState(rows.map(()=>({ sound:null, pattern:new Array(STEPS).fill(false), vol:1 }))));
 
     document.getElementById('save').addEventListener('click', ()=>{
       const payload = { version:2, steps:STEPS, bpm, rows: serializeRows() };
       const blob = new Blob([JSON.stringify(payload,null,2)], { type:'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url;
-      const ts = new Date().toISOString().replace(/[:.]/g,'-');
-      a.download = `salon_ritmos_${ts}.json`;
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`salon_ritmos_${new Date().toISOString().replace(/[:.]/g,'-')}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     });
 
     const fileInput = document.getElementById('fileInput');
@@ -285,25 +201,16 @@
         const text = await f.text(); const payload = JSON.parse(text);
         if(!payload || !Array.isArray(payload.rows)) throw new Error('Formato inválido');
         if(payload.steps && payload.steps !== STEPS){
-          payload.rows.forEach(r=>{
-            const arr = new Array(STEPS).fill(false);
-            for(let i=0;i<Math.min(STEPS, r.pattern.length); i++) arr[i]=!!r.pattern[i];
-            r.pattern = arr;
-          });
+          payload.rows.forEach(r=>{ const arr = new Array(STEPS).fill(false); for(let i=0;i<Math.min(STEPS, r.pattern.length); i++) arr[i]=!!r.pattern[i]; r.pattern = arr; });
         }
         applyRowsState(payload.rows);
         if(typeof payload.bpm === 'number'){ bpm = payload.bpm; bpmInput.value = bpm; bpmVal.textContent = bpm; }
-        alert('Patrón carregat.');
-      }catch(e){ alert('Error al carregar el fitxer JSON.'); }
+        alert('Patró carregat.');
+      }catch(e){ alert('Error en carregar el JSON.'); }
       finally{ fileInput.value = ''; }
     });
 
-    // Inicial: marca el slot segons el selector per defecte (no hi ha selector ara)
     // Tot llest
-
-    // Opcional: carregar un preset inicial (per mostrar)
-    //applyRowsState([{sound:'kick',pattern:[true,false,false,false,true,false,false,false],vol:1}, ...]);
-
   </script>
 </body>
 </html>
