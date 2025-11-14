@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Salón de Ritmos — drag & drop amb guardar/cargar</title>
+  <title>Salón de Ritmos — exportar/importar JSON</title>
   <style>
     :root {
       --bg:#1e1f24; --panel:#2b2f39; --room:#2b2f39; --text:#eaeaea;
@@ -20,7 +20,6 @@
     }
     #controls input[type="range"] { width:160px; }
 
-    /* Paleta draggable */
     #palette { display:flex; gap:12px; align-items:center; padding:12px 20px; margin:0 20px 12px; }
     .instrument {
       display:flex; align-items:center; justify-content:center;
@@ -32,7 +31,6 @@
     .instrument[data-sound="hihat"] { background:#e0d96a; color:#111; }
     .instrument[data-sound="clap"]  { background:#b98adf; }
 
-    /* Sala / graella */
     #room {
       background:var(--room); margin:0 20px 20px; border-radius:12px;
       box-shadow:inset 0 0 0 1px var(--line); padding:16px;
@@ -44,7 +42,6 @@
     }
     .row { display:contents; }
 
-    /* Slot (drop target) */
     .slot {
       width:60px; height:60px; border-radius:50%;
       border:2px dashed #7c8291; background:transparent;
@@ -56,7 +53,6 @@
     .slot.drag-over { border-color:var(--accent); box-shadow:0 0 0 3px #ffd45e55; }
     .slot .label { font-weight:600; font-size:12px; text-align:center; line-height:1.1; pointer-events:none; }
 
-    /* 32 passos */
     .steps {
       display:grid;
       grid-template-columns: repeat(32, 22px);
@@ -79,20 +75,21 @@
     #legend span { display:inline-flex; align-items:center; gap:6px; }
     .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
 
-    /* Feedback arrossegant */
     .instrument.dragging { opacity:0.85; }
+    input[type="file"] { display:none; } /* file picker ocult */
   </style>
 </head>
 <body>
   <header>
-    <h1>Salón de Ritmos — drag & drop</h1>
+    <h1>Salón de Ritmos — exportar/importar JSON</h1>
     <div id="controls">
       <button id="startStop">Iniciar</button>
       <label>BPM <input id="bpm" type="range" min="50" max="200" value="100"/></label>
       <span id="bpmVal">100</span>
       <button id="clear">Limpiar salón</button>
-      <button id="save">Guardar patrón</button>
-      <button id="load">Cargar patrón</button>
+      <button id="save">Guardar patrón (descargar JSON)</button>
+      <button id="load">Cargar patrón (desde archivo)</button>
+      <input id="fileInput" type="file" accept="application/json,.json"/>
     </div>
   </header>
 
@@ -212,7 +209,6 @@
     // Graella i files
     const grid = document.getElementById("grid");
     const rows = []; // [{ slotEl, pattern:Array<bool>, stepEls:[], sound:string|null }, ...]
-
     const instrumentNames = { kick: "Kick", snare: "Snare", hihat: "HiHat", clap: "Clap" };
 
     function attachSlotDnD(slot, row) {
@@ -311,17 +307,16 @@
       schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
     }
 
-    // --------- Net, guardar i carregar ---------
+    // --------- Netejar, exportar i importar ---------
 
     function serializeRows() {
       return rows.map(row => ({
         sound: row.sound || null,
-        pattern: row.pattern.slice(), // còpia
+        pattern: row.pattern.slice(),
       }));
     }
 
     function applyRowsState(state) {
-      // Net visual
       rows.forEach(row => {
         row.sound = null;
         row.slotEl.classList.remove('filled');
@@ -330,7 +325,6 @@
         row.stepEls.forEach(el => el.classList.remove('active', 'current'));
       });
 
-      // Aplica estat
       state.slice(0, rows.length).forEach((st, idx) => {
         const row = rows[idx];
         if (st.sound) {
@@ -345,28 +339,43 @@
       });
     }
 
-    // Botó Limpiar salón
     document.getElementById('clear').addEventListener('click', () => {
       applyRowsState(rows.map(() => ({ sound:null, pattern:new Array(STEPS).fill(false) })));
     });
 
-    // Botó Guardar patrón
+    // Guardar: descarrega JSON (Blob + <a download>)
     document.getElementById('save').addEventListener('click', () => {
-      const payload = { steps: STEPS, rows: serializeRows(), bpm };
-      localStorage.setItem('salonRitmos_v2', JSON.stringify(payload));
-      alert('Patrón guardado.');
+      const payload = {
+        version: 2,
+        steps: STEPS,
+        bpm,
+        rows: serializeRows()
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const ts = new Date().toISOString().replace(/[:.]/g,'-');
+      a.download = `salon_ritmos_${ts}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     });
 
-    // Botó Cargar patrón
-    document.getElementById('load').addEventListener('click', () => {
-      const raw = localStorage.getItem('salonRitmos_v2');
-      if (!raw) return alert('No hay patrón guardado.');
+    // Cargar: obre el selector i llegeix JSON
+    const fileInput = document.getElementById('fileInput');
+    document.getElementById('load').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
       try {
-        const payload = JSON.parse(raw);
+        const text = await file.text();
+        const payload = JSON.parse(text);
         if (!payload || !Array.isArray(payload.rows)) throw new Error('Formato inválido');
-        // Ajust si el guardat té diferent nombre de passos
+
+        // Adapta si steps no coincideix
         if (payload.steps && payload.steps !== STEPS) {
-          // Si tens 16 o 64, fem adaptació senzilla (truncate o pad)
           payload.rows.forEach(r => {
             const arr = new Array(STEPS).fill(false);
             for (let i=0; i<Math.min(STEPS, r.pattern.length); i++) arr[i] = !!r.pattern[i];
@@ -379,9 +388,11 @@
           bpmInput.value = bpm;
           bpmVal.textContent = bpm;
         }
-        alert('Patrón cargado.');
-      } catch(e) {
-        alert('Error al cargar patrón.');
+        alert('Patrón cargado desde archivo.');
+      } catch (e) {
+        alert('Error al cargar el archivo JSON.');
+      } finally {
+        fileInput.value = ''; // reset per poder tornar a carregar el mateix fitxer si cal
       }
     });
   </script>
