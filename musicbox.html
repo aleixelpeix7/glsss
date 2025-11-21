@@ -141,50 +141,45 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial
   </div>
 
 <script>
-/* ---- Core WebAudio and utilities (from your original file) ---- */
+/* -------------------- Core audio + state -------------------- */
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 const audio = new AudioCtx();
-
-function makeGain(val=1){ const g=audio.createGain(); g.gain.value=val; g.connect(audio.destination); return g; }
 function freqFromNote(note){ return 440 * Math.pow(2, (note-69)/12); }
+const masterMelGain = audio.createGain(); masterMelGain.gain.value = 1; masterMelGain.connect(audio.destination);
 
-/* master gain per melodia */
-const masterMelGain = audio.createGain();
-masterMelGain.gain.value = 1;
-masterMelGain.connect(audio.destination);
-
-/* Placeholder: ensure variables that other parts expect exist.
-   If en el teu codi defines Notes/rows/etc. en un altre lloc, aquestes línies no alteren la lògica. */
-let NOTES = Array.from({length:13}, (_,i)=>60 + (12 - i)); // placeholder set; sobreescriu amb la teva llista real si cal
+/* state and DOM refs */
 const pianoGrid = document.getElementById('pianoGrid');
-let melLen = parseInt(document.getElementById('melLen').value,10) || 32;
 const melLenInput = document.getElementById('melLen');
 const melVolInput = document.getElementById('melVol');
 const bpmInput = document.getElementById('bpm');
 const bpmVal = document.getElementById('bpmVal');
-let bpm = parseInt(bpmInput.value,10) || 100;
-let melInstrument = 'piano';
+const startStop = document.getElementById('startStop');
+const ritmeGrid = document.getElementById('ritmeGrid');
+const ritmeRoom = document.getElementById('ritmoView');
+const fileInput = document.getElementById('fileInput');
+
+let NOTES = Array.from({length:13}, (_,i)=>72 - i); // default notes (C5..)
+let melLen = clampDefault(parseInt(melLenInput.value,10), 1, 1000, 32);
 let noteRows = [];
-let rows = []; // ritme rows (assume construïdes en altres llocs del teu codi)
+let rows = [];
 const STEPS = 32;
 let tickCounter = 0;
 let schedulerTimer = null;
+let bpm = parseInt(bpmInput.value,10) || 100;
+let melInstrument = 'piano';
+let melInstLabel = document.createElement('span'); melInstLabel.style.display='none'; document.body.appendChild(melInstLabel);
 
-/* small UI helper label for selected mel instrument (if you want to show) */
-let melInstLabel = document.createElement('span'); melInstLabel.id='melInstLabel'; melInstLabel.style.display='none'; document.body.appendChild(melInstLabel);
-
-/* instrument maps placeholders (ensuren que applyAll no trenca si no tens aquestes estructures) */
+/* maps for rhythm slot visuals */
 const instrumentColorClass = { kick:'kick', snare:'snare', hihat:'hihat', clap:'clap' };
 const instrumentNames = { kick:'Kick', snare:'Snare', hihat:'HiHat', clap:'Clap' };
 
-/* ---- YOUR existing functions for building melody grid, playMelodyNote, scheduler, etc. ----
-   Keep your implementations here. I assume you already have:
-   - makeMelodyRow, buildMelodyGrid, rebuildMelodyGrid, playMelodyNote, scheduleTick or scheduler logic, synthByName, and other handlers.
-   For completeness I include the melody grid builder functions you previously supplied. */
+/* helpers */
+function clampDefault(n,min,max,def){ const v = parseInt(n,10); if(Number.isFinite(v)) return Math.max(min, Math.min(max, v)); return def; }
+function makeGain(val=1){ const g=audio.createGain(); g.gain.value=val; g.connect(audio.destination); return g; }
 
+/* -------------------- Melody grid builders -------------------- */
 function midiToNoteName(m){ const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; return names[m%12] + (Math.floor(m/12)-1); }
 
-/* create rows and initial cells */
 function makeMelodyRow(midi){
   const rowWrap = document.createElement('div'); rowWrap.className='piano-row';
   const label = document.createElement('div'); label.className='note-label'; label.textContent = midiToNoteName(midi);
@@ -208,12 +203,10 @@ function buildMelodyGrid(){
   noteRows.length = 0;
   NOTES.forEach(n=> makeMelodyRow(n));
 }
-buildMelodyGrid();
 
+/* rebuild keeps patterns where possible */
 function rebuildMelodyGrid(){
-  // store old patterns
   const oldPatterns = noteRows.map(r => r.pattern.slice());
-  // clear and rebuild
   pianoGrid.innerHTML = '';
   noteRows.length = 0;
   NOTES.forEach((n, idx) => {
@@ -237,14 +230,199 @@ function rebuildMelodyGrid(){
   });
 }
 
-/* ---- VALIDATION / NORMALIZATION UTILITIES (NEW) ---- */
+/* initial build */
+buildMelodyGrid();
+
+/* -------------------- Rhythm grid builder (integrated) -------------------- */
+const RITME_ROWS = 6;
+const DEFAULT_ROW_LABELS = ['Kick','Snare','HiHat','Clap','Perc1','Perc2'];
+
+function makeRitmeRow(labelText, idx){
+  // left slot and right steps
+  const slotWrap = document.createElement('div');
+  slotWrap.style.display = 'flex';
+  slotWrap.style.alignItems = 'center';
+  slotWrap.style.gap = '8px';
+  const slot = document.createElement('div');
+  slot.className = 'slot';
+  slot.dataset.row = idx;
+  const lbl = document.createElement('div'); lbl.className='label'; lbl.textContent = '—';
+  slot.appendChild(lbl);
+  slotWrap.appendChild(slot);
+
+  const stepsWrap = document.createElement('div');
+  stepsWrap.className = 'steps';
+  const stepEls = [];
+  const pattern = new Array(STEPS).fill(false);
+  for(let i=0;i<STEPS;i++){
+    const s = document.createElement('div');
+    s.className = 'step';
+    s.dataset.index = i;
+    s.addEventListener('click', ()=>{ pattern[i] = !pattern[i]; s.classList.toggle('active'); });
+    stepsWrap.appendChild(s);
+    stepEls.push(s);
+  }
+
+  // append to grid (grid has two columns: slot + steps)
+  ritmeGrid.appendChild(slotWrap);
+  ritmeGrid.appendChild(stepsWrap);
+
+  // volume control (hidden by default)
+  const gainNode = audio.createGain(); gainNode.gain.value = 1; gainNode.connect(audio.destination);
+  const volInput = document.createElement('input'); volInput.type='range'; volInput.min=0; volInput.max=200; volInput.value=100;
+  volInput.style.display='none';
+  volInput.addEventListener('input', ()=>{ const v = parseInt(volInput.value,10)/100; gainNode.gain.setValueAtTime(v, audio.currentTime); });
+
+  const row = {
+    idx,
+    name: labelText || ('Row ' + idx),
+    slotEl: slot,
+    labelEl: lbl,
+    pattern,
+    stepEls,
+    gainNode,
+    gainVal: 1,
+    volEl: volInput,
+    sound: null
+  };
+
+  slot.addEventListener('dragover', e=>{ e.preventDefault(); slot.classList.add('drag-over'); });
+  slot.addEventListener('dragleave', ()=> slot.classList.remove('drag-over'));
+  slot.addEventListener('drop', e=>{
+    e.preventDefault();
+    slot.classList.remove('drag-over');
+    const sound = e.dataTransfer.getData('text/plain');
+    if(sound){
+      row.sound = sound;
+      const cls = instrumentColorClass[sound];
+      if(cls) row.slotEl.classList.add(cls);
+      row.slotEl.classList.add('filled');
+      row.labelEl.textContent = instrumentNames[sound] || sound;
+    }
+  });
+
+  rows.push(row);
+  return row;
+}
+
+function buildRitmeGrid(){
+  ritmeGrid.innerHTML = '';
+  rows.length = 0;
+  for(let i=0;i<RITME_ROWS;i++){
+    makeRitmeRow(DEFAULT_ROW_LABELS[i] || ('Row ' + (i+1)), i);
+  }
+  // connect each row to a common destination or separate master as needed
+  rows.forEach(r=>{ try{ r.gainNode.disconnect(); }catch(e){} r.gainNode.connect(audio.destination); });
+}
+buildRitmeGrid();
+
+/* make palette draggable */
+document.querySelectorAll('#palette .instrument').forEach(el=>{
+  el.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', el.dataset.sound || ''); });
+});
+
+/* -------------------- Simple playMelodyNote (safe) -------------------- */
+function playMelodyNote(time, midiNote, instName, gainNode){
+  const f = freqFromNote(midiNote);
+  const env = audio.createGain(); env.gain.value = 0;
+  const out = audio.createGain(); out.gain.value = (parseInt(melVolInput.value,10)/100) * (gainNode?.gain?.value ?? 1);
+  env.connect(out); out.connect(masterMelGain);
+
+  if(instName === 'piano'){
+    const o1 = audio.createOscillator(); o1.type='triangle'; o1.frequency.setValueAtTime(f, time);
+    const o2 = audio.createOscillator(); o2.type='sine'; o2.frequency.setValueAtTime(f*2, time);
+    o1.connect(env); o2.connect(env);
+    env.gain.setValueAtTime(0, time); env.gain.linearRampToValueAtTime(1, time + 0.01); env.gain.exponentialRampToValueAtTime(0.001, time + 0.6);
+    o1.start(time); o2.start(time); o1.stop(time + 0.7); o2.stop(time + 0.7);
+    setTimeout(()=>{ try{ o1.disconnect(); o2.disconnect(); env.disconnect(); out.disconnect(); }catch(e){} }, 900);
+    return;
+  }
+  if(instName === 'glock'){
+    const o = audio.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(f, time);
+    o.connect(env);
+    env.gain.setValueAtTime(0, time); env.gain.linearRampToValueAtTime(0.9, time + 0.005); env.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+    o.start(time); o.stop(time + 0.45);
+    setTimeout(()=>{ try{ o.disconnect(); env.disconnect(); out.disconnect(); }catch(e){} }, 600);
+    return;
+  }
+  if(instName === 'bass'){
+    const o = audio.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(f/2, time);
+    const filt = audio.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value = 800;
+    o.connect(filt); filt.connect(env);
+    env.gain.setValueAtTime(0, time); env.gain.linearRampToValueAtTime(1, time + 0.02); env.gain.exponentialRampToValueAtTime(0.001, time + 0.8);
+    o.start(time); o.stop(time + 0.9);
+    setTimeout(()=>{ try{ o.disconnect(); filt.disconnect(); env.disconnect(); out.disconnect(); }catch(e){} }, 1100);
+    return;
+  }
+  // default short click for other instruments
+  const o = audio.createOscillator(); o.type='square'; o.frequency.setValueAtTime(f, time);
+  o.connect(env);
+  env.gain.setValueAtTime(0, time); env.gain.linearRampToValueAtTime(0.8, time + 0.005); env.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+  o.start(time); o.stop(time + 0.2);
+  setTimeout(()=>{ try{ o.disconnect(); env.disconnect(); out.disconnect(); }catch(e){} }, 400);
+}
+
+/* -------------------- Scheduler (simple setTimeout version kept) -------------------- */
+function scheduleTick(){
+  const spb = 60 / bpm;
+  const stepDur = spb / 4;
+  const now = audio.currentTime;
+
+  const rhythmIndex = tickCounter % STEPS;
+  const melodyIndex = tickCounter % melLen;
+
+  // rhythm visual + play
+  rows.forEach(row=>{
+    row.stepEls.forEach((el,i)=> el.classList.toggle('current', i === rhythmIndex));
+    if(row.sound && row.pattern[rhythmIndex]){
+      const fn = synthByName?.[row.sound];
+      if(fn) fn(now + 0.02, row.gainNode);
+    }
+  });
+
+  // melody visual + play
+  noteRows.forEach(r=>{
+    r.cells.forEach((el,i)=> el.classList.toggle('current', i === melodyIndex));
+    if(r.pattern[melodyIndex]){
+      playMelodyNote(now + 0.02, r.note, melInstrument, r.gainNode);
+    }
+  });
+
+  tickCounter++;
+  schedulerTimer = setTimeout(scheduleTick, stepDur * 1000);
+}
+
+/* simple synthByName for rhythm (minimal placeholders) */
+const synthByName = {
+  kick: (time, gainNode)=>{ const o = audio.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(100, time); const g = audio.createGain(); g.gain.setValueAtTime(1, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.3); o.connect(g); g.connect(gainNode || audio.destination); o.start(time); o.stop(time+0.35); setTimeout(()=>{ try{ o.disconnect(); g.disconnect(); }catch(e){} },500); },
+  snare: (time,gainNode)=>{ const b = audio.createBufferSource(); /* placeholder silent */ },
+  hihat: (time,gainNode)=>{ /* placeholder */ },
+  clap: (time,gainNode)=>{ /* placeholder */ }
+};
+
+/* -------------------- Serialization -------------------- */
+function serializeAll(){
+  return {
+    version:2,
+    steps: STEPS,
+    bpm,
+    rhythm: rows.map(r=>({ sound: r.sound || null, pattern: r.pattern.slice(), vol: r.gainVal ?? 1 })),
+    melody: {
+      instrument: melInstrument,
+      melLen,
+      melVol: parseInt(melVolInput.value,10)/100,
+      notes: noteRows.map(r=>({ m: r.note, pattern: r.pattern.slice() }))
+    }
+  };
+}
+
+/* -------------------- Validation / Normalization for load -------------------- */
 function clampInt(v, min, max, fallback){
   const n = parseInt(v, 10);
   if(Number.isFinite(n)) return Math.max(min, Math.min(max, n));
   return fallback;
 }
 function isPlainObject(x){ return x && typeof x === 'object' && !Array.isArray(x); }
-
 function normalizePayload(raw){
   if(!isPlainObject(raw)) throw new Error('Fitxer invàlid: no és objecte');
   const out = { version: raw.version || 1, steps: raw.steps || STEPS, bpm: clampInt(raw.bpm, 20, 400, bpm), rhythm: [], melody: null };
@@ -271,7 +449,7 @@ function normalizePayload(raw){
   return out;
 }
 
-/* ---- REPLACED applyAll (more defensive) ---- */
+/* -------------------- applyAll replaced (defensive) -------------------- */
 function applyAll(state){
   if(!state) return;
   try{
@@ -282,13 +460,12 @@ function applyAll(state){
       if(typeof bpmVal !== 'undefined') bpmVal.textContent = bpm;
     }
 
-    // Rhythm (defensive)
+    // Rhythm
     if(Array.isArray(state.rhythm)){
       state.rhythm.slice(0, rows.length).forEach((st, idx) => {
         const row = rows[idx];
         if(!row) return;
         row.sound = st && typeof st.sound === 'string' ? st.sound : null;
-        // reset color classes and label safely
         Object.values(instrumentColorClass).forEach(c => row.slotEl.classList.remove(c));
         row.slotEl.classList.remove('filled');
         const labelEl = row.slotEl.querySelector('.label');
@@ -300,7 +477,6 @@ function applyAll(state){
         } else if(labelEl) {
           labelEl.textContent = '—';
         }
-        // pattern
         if(Array.isArray(st.pattern)){
           for(let i=0;i<Math.min(STEPS, st.pattern.length); i++){
             row.pattern[i] = !!st.pattern[i];
@@ -311,7 +487,6 @@ function applyAll(state){
             if(row.stepEls[i]) row.stepEls[i].classList.remove('active');
           }
         }
-        // volume
         if(typeof st.vol === 'number' && row.gainNode){
           row.gainVal = Math.max(0, st.vol);
           row.gainNode.gain.setValueAtTime(row.gainVal, audio.currentTime);
@@ -322,7 +497,6 @@ function applyAll(state){
 
     // Melody
     if(state.melody && isPlainObject(state.melody)){
-      // instrument
       if(typeof state.melody.instrument === 'string'){
         melInstrument = state.melody.instrument;
         document.querySelectorAll('.mel-instr').forEach(x=>x.classList.remove('active'));
@@ -331,31 +505,26 @@ function applyAll(state){
         if(typeof melInstLabel !== 'undefined' && sel) melInstLabel.textContent = sel.textContent;
       }
 
-      // melLen: apply and rebuild grid (defensive)
       if(typeof state.melody.melLen === 'number'){
         const v = clampInt(state.melody.melLen, 1, 1000, melLen);
         if(v !== melLen){
           melLen = v;
           if(typeof melLenInput !== 'undefined') melLenInput.value = v;
-          // disconnect previous gain nodes to avoid leaks
           noteRows.forEach(r=>{ try{ r.gainNode.disconnect(); }catch(e){} });
           rebuildMelodyGrid();
         }
       }
 
-      // melVol
       if(typeof state.melody.melVol === 'number'){
         const vol = Math.max(0, Math.min(4, state.melody.melVol));
         if(typeof melVolInput !== 'undefined') melVolInput.value = Math.round(vol * 100);
         masterMelGain.gain.setValueAtTime(vol, audio.currentTime);
       }
 
-      // notes: apply after grid exists
       if(Array.isArray(state.melody.notes) && noteRows.length){
         state.melody.notes.slice(0, noteRows.length).forEach((n, idx) => {
           if(!isPlainObject(n)) return;
           const row = noteRows[idx];
-          // ensure pattern size matches melLen
           row.pattern = new Array(melLen).fill(false);
           row.cells.forEach(c => c.classList.remove('active'));
           if(Array.isArray(n.pattern)){
@@ -374,15 +543,15 @@ function applyAll(state){
   }
 }
 
-/* ---- Save / Load handlers (load replaced to normalize first) ---- */
+/* -------------------- Save / Load handlers (integrated) -------------------- */
 document.getElementById('save').addEventListener('click', ()=>{
   const payload = serializeAll();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
   a.download = `salon_full_${new Date().toISOString().replace(/[:.]/g,'-')}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 });
-const fileInput = document.getElementById('fileInput');
 document.getElementById('load').addEventListener('click', ()=> fileInput.click());
+
 fileInput.addEventListener('change', async ()=>{
   const f = fileInput.files[0];
   if(!f) return;
@@ -390,9 +559,8 @@ fileInput.addEventListener('change', async ()=>{
     const text = await f.text();
     const raw = JSON.parse(text);
     const payload = normalizePayload(raw);
-    // ensure AudioContext resumed if needed (some browsers block audio until user gesture)
     if (audio.state === 'suspended') {
-      try{ await audio.resume(); }catch(e){/* ignore */ }
+      try{ await audio.resume(); }catch(e){}
     }
     applyAll(payload);
     alert('Patró carregat correctament.');
@@ -404,16 +572,14 @@ fileInput.addEventListener('change', async ()=>{
   }
 });
 
-/* ---- Clear (unchanged) ---- */
+/* -------------------- Clear / Tabs / Autoscroll (kept) -------------------- */
 document.getElementById('clear').addEventListener('click', ()=>{
-  rows.forEach(r=>{ r.sound=null; Object.values(instrumentColorClass).forEach(c=>r.slotEl.classList.remove(c)); r.slotEl.classList.remove('filled'); r.slotEl.querySelector('.label').textContent='—'; r.pattern.fill(false); r.stepEls.forEach(el=>el.classList.remove('active','current')); r.gainVal=1; if(r.gainNode) r.gainNode.gain.setValueAtTime(1,audio.currentTime); if(r.volEl) r.volEl.value=100; });
+  rows.forEach(r=>{ r.sound=null; Object.values(instrumentColorClass).forEach(c=>r.slotEl.classList.remove(c)); r.slotEl.classList.remove('filled'); if(r.slotEl.querySelector('.label')) r.slotEl.querySelector('.label').textContent='—'; r.pattern.fill(false); r.stepEls.forEach(el=>el.classList.remove('active','current')); r.gainVal=1; if(r.gainNode) r.gainNode.gain.setValueAtTime(1,audio.currentTime); if(r.volEl) r.volEl.value=100; });
   noteRows.forEach(r=>{ r.pattern.fill(false); r.cells.forEach(c=>c.classList.remove('active','current')); });
 });
 
-/* ---- Tabs UI (unchanged) ---- */
 document.querySelectorAll('.tab').forEach(t=>{ t.addEventListener('click', ()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); const tab = t.dataset.tab; document.getElementById('ritmoView').style.display = (tab==='ritmo') ? '' : 'none'; document.getElementById('melodiaView').style.display = (tab==='melodia') ? '' : 'none'; }); });
 
-/* ---- Autoscroll helpers (unchanged) ---- */
 let autoScrollInterval = null;
 function startAutoScroll(direction, speed=8){ stopAutoScroll(); autoScrollInterval = setInterval(()=>{ ritmeRoom.scrollBy({ top: direction * speed, behavior: 'auto' }); },50); }
 function stopAutoScroll(){ if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval=null; } }
@@ -422,32 +588,19 @@ function deactivateAutoScrollAndWheel(){ ritmeRoom.removeEventListener('dragover
 function handleDragOver(e){ e.preventDefault(); const rect = ritmeRoom.getBoundingClientRect(); const y = e.clientY - rect.top; const margin = Math.min(120, rect.height * 0.2); if(y > rect.height - margin){ const intensity = (y - (rect.height - margin)) / margin; startAutoScroll(1, 6 + Math.round(intensity * 18)); } else if (y < margin){ const intensity = (margin - y) / margin; startAutoScroll(-1, 6 + Math.round(intensity * 18)); } else { stopAutoScroll(); } }
 function handleWheelWhileDragging(e){ if(!isDraggingInstrument) return; e.preventDefault(); ritmeRoom.scrollBy({ top: e.deltaY, left:0, behavior:'auto' }); }
 
-/* ---- initial build (ensure grid exists) ---- */
-function initialBuildMelodyGrid(){
-  pianoGrid.innerHTML = '';
-  noteRows.length = 0;
-  NOTES.forEach(n => {
-    const rowWrap = document.createElement('div'); rowWrap.className='piano-row';
-    const label = document.createElement('div'); label.className='note-label'; label.textContent = midiToNoteName(n);
-    const steps = document.createElement('div'); steps.className='note-steps';
-    rowWrap.appendChild(label); rowWrap.appendChild(steps); pianoGrid.appendChild(rowWrap);
-    const pattern = new Array(melLen).fill(false);
-    const cells = [];
-    for(let i=0;i<melLen;i++){
-      const c = document.createElement('div'); c.className='note-cell'; c.dataset.index = i;
-      c.addEventListener('click', ()=>{ pattern[i] = !pattern[i]; c.classList.toggle('active'); });
-      steps.appendChild(c); cells.push(c);
-    }
-    const gainNode = audio.createGain(); gainNode.gain.value = 1; gainNode.connect(masterMelGain);
-    noteRows.push({ note: n, elRow: rowWrap, pattern, cells, gainNode });
-  });
-}
-initialBuildMelodyGrid();
+/* -------------------- Start/Stop simple control (start scheduler) -------------------- */
+startStop.addEventListener('click', async ()=>{
+  if (audio.state === 'suspended') try{ await audio.resume(); }catch(e){}
+  if(schedulerTimer){
+    clearTimeout(schedulerTimer); schedulerTimer = null; startStop.textContent = 'Iniciar';
+  } else {
+    tickCounter = 0;
+    scheduleTick();
+    startStop.textContent = 'Aturar';
+  }
+});
 
-/* tiny map utility (already defined above but kept for safety) */
-function midiToNoteName(m){ const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; return names[m%12] + (Math.floor(m/12)-1); }
-
-/* End of script */
+/* -------------------- End script -------------------- */
 </script>
 </body>
 </html>
