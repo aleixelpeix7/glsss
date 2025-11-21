@@ -1,14 +1,24 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Inicio | LAG</title>
   <link rel="icon" href="assets/favicon.png" type="image/png" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
+    :root{
+      --bg:#002244;
+      --accent:#7CCF35;
+      --nav-bg: rgba(0,0,0,0.7);
+      --link-red:#E7180B;
+      --link-red-hover:#FB2C36;
+    }
+
+    html,body{height:100%}
     body {
-      background-color: #002244;
+      background-color: var(--bg);
       font-family: Arial, sans-serif;
-      color: #7CCF35;
+      color: var(--accent);
       margin: 0;
       padding: 0;
       box-sizing: border-box;
@@ -16,7 +26,7 @@
 
     /* 🔝 Barra de navegació estil Aleix El Peix */
     nav {
-      background-color: rgba(0, 0, 0, 0.7);
+      background-color: var(--nav-bg);
       padding: 1rem 2rem;
       position: sticky;
       top: 0;
@@ -67,17 +77,82 @@
 
     .enllac {
       font-size: 24px;
-      color: #E7180B;
+      color: var(--link-red);
       text-decoration: underline;
       font-weight: bold;
     }
 
     .enllac:hover {
-      color: #FB2C36;
+      color: var(--link-red-hover);
     }
 
     main {
       padding: 2rem;
+    }
+
+    /* ---------- Modal primer cop ---------- */
+    .fv-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.62);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 1rem;
+    }
+
+    .fv-modal {
+      background: linear-gradient(180deg,#001829 0%, #00283a 100%);
+      border-radius: 10px;
+      width: 700px;
+      max-width: 95%;
+      max-height: 95%;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid rgba(124,207,53,0.08);
+    }
+
+    .fv-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 0.6rem 0.9rem;
+      color: #cfeea6;
+      font-weight:700;
+      gap:0.75rem;
+    }
+
+    .fv-title { font-size: 16px; }
+
+    .fv-close {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #fff;
+      padding: 0.35rem 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .fv-iframe-wrap {
+      background: #fff;
+      flex: 1 1 auto;
+      min-height: 320px;
+      display:block;
+    }
+
+    .fv-iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display:block;
+    }
+
+    @media (max-width:720px) {
+      .fv-modal { width: 100%; height: 90%; border-radius: 8px; }
     }
   </style>
 </head>
@@ -97,7 +172,6 @@
 
   <!-- 🎮 Contingut principal -->
   <main>
-   
     <h1>Juego de la Serpiente:</h1>
     <a class="enllac" href="https://lagg.netlify.app/serpiente">serpiente</a>
 
@@ -105,5 +179,96 @@
     <a class="enllac" href="https://lagg.netlify.app/memovisual">Memo-visual</a>
   </main>
 
+  <!-- Modal (renderitzat per JS només si cal) -->
+  <script>
+    (function () {
+      var STORAGE_KEY = 'lag_first_visit_form_seen_v1';
+      var FORM_SRC = 'https://docs.google.com/forms/d/e/1FAIpQLScto6OpX3isEOp8ARLkUAVU3Sf6m2midTiImK7COD3Zy0He_w/viewform?embedded=true';
+
+      // Si ja l'hem vist, no fem res
+      try {
+        if (localStorage && localStorage.getItem(STORAGE_KEY)) return;
+      } catch (e) {
+        // si localStorage falla, continuem i mostrem modal (no bloquegem)
+      }
+
+      // Crear elements del modal
+      function buildModal() {
+        var backdrop = document.createElement('div');
+        backdrop.className = 'fv-backdrop';
+        backdrop.setAttribute('role','dialog');
+        backdrop.setAttribute('aria-modal','true');
+
+        var modal = document.createElement('div');
+        modal.className = 'fv-modal';
+
+        var header = document.createElement('div');
+        header.className = 'fv-header';
+
+        var title = document.createElement('div');
+        title.className = 'fv-title';
+        title.textContent = 'Ens agradaria saber la teva opinió';
+
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'fv-close';
+        closeBtn.type = 'button';
+        closeBtn.textContent = 'Tancar';
+        closeBtn.setAttribute('aria-label','Tancar formulari');
+
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+
+        var iframeWrap = document.createElement('div');
+        iframeWrap.className = 'fv-iframe-wrap';
+
+        var iframe = document.createElement('iframe');
+        iframe.className = 'fv-iframe';
+        iframe.src = FORM_SRC;
+        iframe.title = 'Formulari de LAG';
+        iframe.loading = 'lazy';
+
+        iframeWrap.appendChild(iframe);
+        modal.appendChild(header);
+        modal.appendChild(iframeWrap);
+        backdrop.appendChild(modal);
+
+        // handlers
+        function close(saveFlag) {
+          try {
+            if (saveFlag !== false && localStorage) localStorage.setItem(STORAGE_KEY, '1');
+          } catch (e) {}
+          if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+          document.removeEventListener('keydown', onKeyDown);
+        }
+
+        closeBtn.addEventListener('click', function () { close(true); });
+
+        // tancar clicant al backdrop (fora del modal)
+        backdrop.addEventListener('click', function (e) {
+          if (e.target === backdrop) close(true);
+        });
+
+        // Escape per tancar i focus simple
+        function onKeyDown(e) {
+          if (e.key === 'Escape') { e.preventDefault(); close(true); }
+        }
+        document.addEventListener('keydown', onKeyDown);
+
+        // focus en el botó de tancar per accessibilitat
+        setTimeout(function () { closeBtn.focus(); }, 50);
+
+        return backdrop;
+      }
+
+      // Mostrem modal un cop DOM carregat
+      document.addEventListener('DOMContentLoaded', function () {
+        var modal = buildModal();
+        document.body.appendChild(modal);
+        // Guardem la clau ara mateix per garantir "només una vegada" encara que l'usuari no tanqui el modal.
+        try { if (localStorage) localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
+      }, { once: true });
+
+    })();
+  </script>
 </body>
 </html>
