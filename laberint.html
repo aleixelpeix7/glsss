@@ -9,7 +9,6 @@
     :root{
       --bg:#002244;
       --accent:#FFDF20;
-      --accent-2:#FB2C36;
       --muted:rgba(255,255,255,0.08);
       --wall:#0b3d91;
       --floor:#081728;
@@ -31,27 +30,42 @@
       padding:18px;
     }
 
-    /* Barra superior centrada */
+    /* Enllaç "Inici" absolut com a l'exemple */
+    .enllac-inici {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      font-size: 20px;
+      color: #E7180B;
+      text-decoration: underline;
+      font-weight: bold;
+      z-index: 1200;
+    }
+    .enllac-inici:hover { color:#FB2C36; }
+
+    /* Barra superior centrada com al teu estil però amb logo i links */
     nav{
       width:100%;
       max-width:980px;
-      background:rgba(0,0,0,0.65);
+      background:rgba(0,0,0,0.7);
       padding:14px 18px;
       border-radius:10px;
       display:flex;
       align-items:center;
       justify-content:space-between;
+      position:relative;
+      z-index:1100;
     }
-    nav .left {display:flex;align-items:center;gap:10px}
-    nav img{height:44px}
+    nav ul{list-style:none;display:flex;gap:18px;align-items:center;margin:0;padding:0}
+    nav li.logo img{height:56px}
     nav a{color:#fff;text-decoration:none;font-weight:700}
     nav a:hover{color:#ffff66}
 
     /* Layout central */
-    main{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:980px}
+    main{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:980px;position:relative}
     .meta{display:flex;gap:10px;align-items:center}
 
-    /* Canvas mida fixa (sempre la mateixa mida visual) */
+    /* Canvas mida fixa */
     #gameWrap{position:relative;width:var(--canvas-size);height:var(--canvas-size)}
     canvas{width:var(--canvas-size);height:var(--canvas-size);display:block;background:var(--floor);border-radius:8px;border:2px solid rgba(255,255,255,0.03)}
     /* Botons sobre canvas */
@@ -63,13 +77,13 @@
     #pauseBtn{right:12px;top:12px;transform:none;background:transparent;color:var(--accent);border:1px solid var(--muted);padding:6px 8px}
     #solveBtn{left:12px;top:12px;transform:none;background:transparent;color:var(--accent);border:1px solid var(--muted);padding:6px 8px}
 
-    /* Indicadors a sobre del canvas (nivell, passos, temps) */
+    /* HUD (nivell, temps, passos) */
     .hud{
       position:absolute;left:12px;bottom:12px;padding:8px 10px;background:rgba(0,0,0,0.45);border-radius:8px;color:#dff6c5;font-weight:700;z-index:20;font-size:13px;
       display:flex;gap:12px;align-items:center;
     }
 
-    /* Respon a pantalles petites */
+    /* Responsive */
     @media (max-width:560px){
       :root{--canvas-size:92vw}
       nav{padding:10px;border-radius:8px}
@@ -77,24 +91,25 @@
       .canvas-button{padding:8px 10px}
       #pauseBtn,#solveBtn{display:block}
     }
-
-    /* estètica adicional */
-    aside.info{color:#cfeea6;font-size:13px;margin-top:6px;text-align:center}
   </style>
 </head>
 <body>
+
+  <a class="enllac-inici" href="index.html">Inici</a>
+
   <nav>
-    <div class="left">
-      <a href="index.html"><img src="assets/logo.png" alt="Logo LAG"></a>
-      <a href="https://lagg.netlify.app" style="color:#fff;">Inici</a>
-    </div>
-    <div><a href="https://lagg.netlify.app/contacte">Contactar</a></div>
+    <ul style="align-items:center">
+      <li class="logo"><a href="index.html"><img src="assets/logo.png" alt="Logo LAG"></a></li>
+    </ul>
+    <ul style="align-items:center">
+      <li><a href="https://lagg.netlify.app/contacte">Contactar</a></li>
+    </ul>
   </nav>
 
   <main>
-    <div class="meta">
+    <div class="meta" style="align-items:center">
       <div style="color:#cfeea6;font-weight:800">Laberint per Nivells</div>
-      <div style="color:rgba(255,255,255,0.65)">Mida de la graella: <strong id="gridLabel"></strong>×<strong id="gridLabel2"></strong></div>
+      <div style="color:rgba(255,255,255,0.65)">Mida: <strong id="gridLabel"></strong>×<strong id="gridLabel2"></strong></div>
       <div style="color:rgba(255,255,255,0.65)">Nivell: <strong id="levelLabel">1</strong></div>
     </div>
 
@@ -111,12 +126,10 @@
         <div>Passos: <span id="steps">0</span></div>
       </div>
     </div>
-
-    <aside class="info">El laberint conserva la mateixa mida; cada nivell exigeix un camí mínim més llarg (més difícil).</aside>
   </main>
 
 <script>
-/* Laberint per nivells: mateixa mida, dificultat incrementant en funció de la longitud mínima del camí */
+/* Laberint per nivells (mateixa mida) + nav com enllaç Inici absolut */
 (() => {
   const canvas = document.getElementById('mazeCanvas');
   const ctx = canvas.getContext('2d');
@@ -130,9 +143,8 @@
   const gridLabel = document.getElementById('gridLabel');
   const gridLabel2 = document.getElementById('gridLabel2');
 
-  // configuració
-  const GRID = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--grid-size')) || 23; // cel·les per costat
-  const CANVAS_PX = 700; // base logical drawing resolution (will scale with CSS)
+  const GRID = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--grid-size')) || 23;
+  const CANVAS_PX = 700;
   canvas.width = CANVAS_PX;
   canvas.height = CANVAS_PX;
 
@@ -149,38 +161,23 @@
   let timerRAF = null;
   let solvingPath = null;
 
-  // nivell i criteri de dificultat:
   let level = 1;
-  const baseMinPath = Math.floor((cols + rows) / 3); // camí mínim base
-  const perLevelIncrease = Math.floor((cols + rows) / 12); // increment per nivell
+  const baseMinPath = Math.floor((cols + rows) / 3);
+  const perLevelIncrease = Math.floor((cols + rows) / 12);
 
-  // genera fins que la solució mínima tingui la longitud requerida
-  function generateValidMaze(minPathLen){
-    // intenta generar fins a N intents
-    const maxAttempts = 60;
-    for(let attempt=0; attempt<maxAttempts; attempt++){
-      const m = generateMaze(cols,rows);
-      const shortest = shortestPathLength(m, {x:0,y:0}, {x:cols-1,y:rows-1});
-      if(shortest >= minPathLen) return m;
-    }
-    // si no troba, torna l'últim generat
-    return generateMaze(cols,rows);
-  }
-
-  // generador DFS que retorna nova matriu
   function generateMaze(w,h){
     const grid = [];
     for(let y=0;y<h;y++){
       grid[y]=[];
       for(let x=0;x<w;x++){
-        grid[y][x] = {x,y,visited:false,walls:[true,true,true,true]}; // top,right,bottom,left
+        grid[y][x] = {x,y,visited:false,walls:[true,true,true,true]};
       }
     }
-    const stack = [];
-    const start = grid[0][0];
-    start.visited = true;
+    const stack=[];
+    const start=grid[0][0];
+    start.visited=true;
     stack.push(start);
-    const dirs = [
+    const dirs=[
       {dx:0,dy:-1,wall:0,opp:2},
       {dx:1,dy:0,wall:1,opp:3},
       {dx:0,dy:1,wall:2,opp:0},
@@ -188,15 +185,13 @@
     ];
     while(stack.length){
       const cur = stack[stack.length-1];
-      const neighbors = [];
+      const n = [];
       for(const d of dirs){
-        const nx = cur.x + d.dx, ny = cur.y + d.dy;
-        if(nx>=0 && nx<w && ny>=0 && ny<h && !grid[ny][nx].visited){
-          neighbors.push({d,nx,ny});
-        }
+        const nx=cur.x+d.dx, ny=cur.y+d.dy;
+        if(nx>=0&&nx<w&&ny>=0&&ny<h && !grid[ny][nx].visited) n.push({d,nx,ny});
       }
-      if(neighbors.length){
-        const pick = neighbors[Math.floor(Math.random()*neighbors.length)];
+      if(n.length){
+        const pick = n[Math.floor(Math.random()*n.length)];
         const nxt = grid[pick.ny][pick.nx];
         cur.walls[pick.d.wall] = false;
         nxt.walls[pick.d.opp] = false;
@@ -204,13 +199,11 @@
         stack.push(nxt);
       } else stack.pop();
     }
-    // assegura obertures d'entrada i sortida
-    grid[0][0].walls[3] = false;
-    grid[h-1][w-1].walls[1] = false;
+    grid[0][0].walls[3]=false;
+    grid[h-1][w-1].walls[1]=false;
     return grid;
   }
 
-  // BFS per longitud mínima (retorna longitud en nombres de cel·les)
   function shortestPathLength(m, start, goal){
     const h = m.length, w = m[0].length;
     const q = [];
@@ -239,15 +232,24 @@
     return Infinity;
   }
 
-  // dibuixa el laberint i elements
+  function generateValidMaze(minLen){
+    const maxAttempts = 120;
+    let last = null;
+    for(let i=0;i<maxAttempts;i++){
+      const m = generateMaze(cols,rows);
+      last = m;
+      const len = shortestPathLength(m, {x:0,y:0}, {x:cols-1,y:rows-1});
+      if(len >= minLen) return m;
+    }
+    return last;
+  }
+
   function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     const cs = canvas.width / cols;
-    // background
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--floor') || '#081728';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // walls
     ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--wall') || '#0b3d91';
     ctx.lineWidth = Math.max(1, cs/12);
     ctx.lineCap = 'square';
@@ -264,7 +266,6 @@
       }
     }
 
-    // solució (si activa)
     if(solvingPath){
       ctx.fillStyle = 'rgba(124,207,53,0.12)';
       for(const p of solvingPath){
@@ -272,13 +273,11 @@
       }
     }
 
-    // goal
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--goal') || '#7CCF35';
     ctx.beginPath();
     ctx.arc(goal.x*cs + cs/2, goal.y*cs + cs/2, cs*0.32, 0, Math.PI*2);
     ctx.fill();
 
-    // player
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--player') || '#FFBF69';
     ctx.beginPath();
     ctx.arc(player.x*cs + cs/2, player.y*cs + cs/2, cs*0.28, 0, Math.PI*2);
@@ -322,8 +321,7 @@
     }
   }
 
-  // BFS per obtenir camí (array)
-  function findPath(m, start, goal){
+  function findPath(start, goal){
     const q = [];
     const visited = Array(rows).fill(0).map(()=>Array(cols).fill(false));
     const parent = Array(rows).fill(0).map(()=>Array(cols).fill(null));
@@ -361,16 +359,10 @@
   }
 
   function solveMaze(){
-    solvingPath = findPath(maze, player, goal);
+    solvingPath = findPath(player, goal);
     draw();
   }
 
-  function updateHUD(){
-    stepsEl.textContent = steps;
-    timeEl.textContent = ((performance.now()-startTime)/1000).toFixed(1) + 's';
-  }
-
-  // controls
   let lastMove = 0;
   window.addEventListener('keydown', (e)=>{
     if(!running) return;
@@ -385,12 +377,6 @@
     if(moved) lastMove = now;
   });
 
-  // pad mòbil (botons superiors)
-  document.querySelectorAll('.pad-btn')?.forEach(btn=>{
-    btn.addEventListener('click', ()=> tryMove(btn.dataset.dir));
-  });
-
-  // UI events
   startButton.addEventListener('click', ()=>{
     running = true;
     startTime = performance.now();
@@ -412,14 +398,16 @@
     startLevel(level);
   });
 
-  // inicia un nivell: calcula la longitud mínima requerida i genera laberint fins que compleixi
+  function updateHUD(){
+    stepsEl.textContent = steps;
+    timeEl.textContent = ((performance.now()-startTime)/1000).toFixed(1) + 's';
+  }
+
   function startLevel(n){
     const minLen = baseMinPath + (n-1) * perLevelIncrease;
-    // mostra que s'està generant (startButton visible amb text generant)
     startButton.style.display = 'block';
     startButton.textContent = 'Generant...';
     startButton.disabled = true;
-    // genera en background (no blocking per massa temps)
     setTimeout(()=>{
       maze = generateValidMaze(minLen);
       player = {x:0,y:0};
@@ -437,7 +425,6 @@
     }, 20);
   }
 
-  // generador amb criteri — reutilitza funcions anteriors
   function generateValidMaze(minPathLen){
     const maxAttempts = 120;
     let last = null;
@@ -450,14 +437,12 @@
     return last;
   }
 
-  // inicial
   function boot(){
     level = 1;
     levelLabel.textContent = level;
     gridLabel.textContent = cols;
     gridLabel2.textContent = rows;
     startLevel(level);
-    // tick per actualitzar el HUD de temps
     function tick(){
       if(running) updateHUD();
       timerRAF = requestAnimationFrame(tick);
@@ -465,7 +450,6 @@
     timerRAF = requestAnimationFrame(tick);
   }
 
-  // exposa funcions per debug a consola
   window.__lab = {regen:()=> startLevel(level), next: ()=> { level++; startLevel(level);}};
 
   boot();
