@@ -2,150 +2,168 @@
 <html lang="ca">
 <head>
   <meta charset="utf-8" />
-  <title>Laberint | LAG</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Joc de laberint | LAG</title>
   <link rel="icon" href="assets/favicon.png" type="image/png" />
   <style>
     :root{
       --bg:#002244;
-      --accent:#7CCF35;
-      --nav-bg: rgba(0,0,0,0.7);
-      --muted: rgba(255,255,255,0.08);
+      --panel:#0b2a44;
+      --accent:#FFDF20;
+      --accent-2:#FB2C36;
+      --muted:#888;
       --wall:#0b3d91;
-      --floor:#001a33;
-      --player:#ffbf69;
+      --floor:#111827;
+      --player:#FFBF69;
       --goal:#7CCF35;
-      --card: linear-gradient(180deg,#001829 0%, #00283a 100%);
+      --btn-bg: #FFDF20;
+      --btn-fg: #FB2C36;
+      --wrap-w:400px;
     }
-    html,body{height:100%;margin:0;padding:0;font-family:Inter,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--accent)}
-    *,*::before,*::after{box-sizing:border-box}
 
-    nav{background:var(--nav-bg);padding:1rem 1.25rem;position:sticky;top:0;z-index:100}
-    nav ul{list-style:none;display:flex;align-items:center;justify-content:space-between;margin:0;padding:0}
-    nav li.logo{display:flex;align-items:center}
-    nav li.logo img{height:56px;margin-right:0.5rem}
-    nav a{color:white;text-decoration:none;font-weight:700}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+      background:var(--bg);
+      color:#FAFAF9;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:22px 12px;
+      gap:12px;
+    }
+
+    nav{
+      position:sticky;top:0;width:100%;max-width:920px;background:rgba(0,0,0,0.6);
+      padding:14px 18px;border-radius:8px;margin-bottom:10px;
+    }
+    nav ul{display:flex;justify-content:space-between;align-items:center;list-style:none}
+    nav li.logo img{height:52px}
+    nav a{color:#fff;text-decoration:none;font-weight:700}
     nav a:hover{color:#ffff66}
 
-    main{padding:2rem;min-height:calc(100vh - 120px);display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start}
-    @media (max-width:900px){ main{grid-template-columns:1fr} }
+    main{width:100%;max-width:920px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
 
-    .panel{background:var(--card);border-radius:12px;padding:14px;border:1px solid var(--muted);box-shadow:0 10px 30px rgba(0,0,0,0.6)}
-    h1{margin:0 0 10px 0;color:var(--accent);font-size:20px}
+    /* compacte game wrap */
+    #gameWrap{position:relative;width:var(--wrap-w);min-width:260px}
+    canvas{width:100%;height:auto;display:block;background:var(--floor);border:2px solid #222;border-radius:6px}
+    h1{font-size:18px;margin-bottom:8px;text-align:center}
 
-    /* canvas area */
-    .game-wrap{display:flex;flex-direction:column;gap:12px;align-items:center}
-    canvas{background:var(--floor);border-radius:10px;width:100%;height:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);max-width:780px}
-    .controls{display:flex;gap:8px;flex-wrap:wrap}
-    button{background:var(--accent);color:#05211a;border:0;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer}
-    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--accent)}
-    .muted{color:rgba(255,255,255,0.65);font-size:13px}
+    /* botons sobre el canvas */
+    .canvas-button{
+      position:absolute;
+      background:var(--btn-bg);
+      color:var(--btn-fg);
+      border:1px solid rgba(0,0,0,0.25);
+      padding:8px 12px;
+      font-size:14px;
+      cursor:pointer;
+      border-radius:8px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.45);
+      user-select:none;
+      z-index:30;
+      transform:translateX(-50%);
+      white-space:nowrap;
+    }
+    #startButton{left:50%;top:50%;transform:translate(-50%,-50%);font-weight:800}
+    #pauseContinue{left:50%;top:12px;transform:translateX(-50%);display:none}
+    #pauseReset{left:calc(100% - 14px);top:12px;transform:translate(-100%,0);display:none}
+    #gameOverReset{left:50%;top:50%;transform:translate(-50%,-50%);display:none}
 
-    .stats{display:flex;gap:8px;margin-top:8px}
-    .stat{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;font-weight:700;color:#cfeea6;min-width:90px;text-align:center}
+    .hidden{display:none}
+    #score{color:var(--muted);font-size:14px;text-align:center;margin-top:8px}
 
-    /* mobile pad */
-    .mobile-pad{display:none;margin-top:8px;gap:6px}
-    .pad-row{display:flex;gap:6px;justify-content:center}
-    .pad-btn{width:56px;height:56px;border-radius:10px;background:#02131a;border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:800;cursor:pointer}
-    @media (max-width:900px){ .mobile-pad{display:block} }
+    /* controls / pad (visible a mòbil) */
+    .mobile-pad{display:none;margin-top:10px;gap:8px;justify-content:center}
+    .pad-row{display:flex;gap:8px;justify-content:center}
+    .pad-btn{width:48px;height:48px;border-radius:8px;background:#07131a;border:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:800;cursor:pointer}
+    @media (max-width:560px){
+      #gameWrap{width:92vw;max-width:420px}
+      .pad-row{gap:6px}
+      .mobile-pad{display:flex;flex-direction:column}
+      #pauseContinue{display:block}
+      #pauseReset{display:block}
+    }
 
-    /* First-visit modal (estil com el teu exemple) */
-    .fv-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.62);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem}
-    .fv-modal{background:var(--card);border-radius:10px;width:780px;max-width:98%;height:80vh;max-height:95vh;box-shadow:0 12px 30px rgba(0,0,0,0.6);display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(124,207,53,0.08)}
-    .fv-header{display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.9rem;color:#cfeea6;font-weight:700;gap:0.75rem;flex:0 0 auto}
-    .fv-title{font-size:16px}
-    .fv-close{background:transparent;border:1px solid rgba(255,255,255,0.08);color:#fff;padding:0.35rem 0.6rem;border-radius:6px;cursor:pointer;font-size:14px}
-    .fv-body{padding:12px;flex:1 1 auto;overflow:auto;color:#d6f7b6}
-    @media (max-width:720px){ .fv-modal{width:100%;height:95vh;border-radius:8px} }
-
-    footer{grid-column:1/-1;text-align:center;color:rgba(255,255,255,0.45);margin-top:12px;font-size:13px}
+    /* info panel */
+    .panel{background:transparent;color:var(--accent);max-width:420px}
+    .muted{color:#d3eab2}
   </style>
 </head>
 <body>
-
-  <nav>
+  <nav style="max-width:920px;">
     <ul>
-      <li class="logo"><a href="index.html"><img src="assets/logo.png" alt="Logo LAG"></a></li>
-      <li><a href="https://lagg.netlify.app/contacte">Contactar</a></li>
+      <li class="logo"><a href="https://lagg.netlify.app"><img src="assets/logo.png" alt="logo"></a></li>
+      <li style="display:flex;gap:18px;align-items:center">
+        <a href="https://lagg.netlify.app">Inici</a>
+        <a href="https://lagg.netlify.app/contacte">Contactar</a>
+      </li>
     </ul>
   </nav>
 
   <main>
-    <section class="panel">
-      <h1>Joc de laberint</h1>
-      <div class="game-wrap">
-        <canvas id="mazeCanvas" width="700" height="700" aria-label="Laberint"></canvas>
+    <section id="gameArea" style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <h1>🔷 Laberint compacte</h1>
+      <div id="gameWrap" aria-live="polite">
+        <canvas id="mazeCanvas" width="400" height="400" aria-label="Laberint"></canvas>
 
-        <div class="controls" style="width:100%;justify-content:space-between">
-          <div style="display:flex;gap:8px;align-items:center">
-            <button id="restartBtn">Reinicia</button>
-            <button class="secondary" id="solveBtn">Mostra camí</button>
-            <div class="muted" style="margin-left:8px">Mida:
-              <select id="sizeSelect" style="margin-left:6px;background:transparent;color:var(--accent);border:1px solid rgba(255,255,255,0.04);padding:6px;border-radius:6px">
-                <option value="11">11×11</option>
-                <option value="17">17×17</option>
-                <option value="23" selected>23×23</option>
-                <option value="31">31×31</option>
-                <option value="41">41×41</option>
-              </select>
-            </div>
-          </div>
+        <button id="startButton" class="canvas-button" aria-label="Començar">▶️ Començar</button>
+        <button id="pauseContinue" class="canvas-button" aria-label="Pausa Continuar">⏯</button>
+        <button id="pauseReset" class="canvas-button" aria-label="Reiniciar">🔁</button>
+        <button id="gameOverReset" class="canvas-button" aria-label="Reiniciar final">🔁 Reiniciar</button>
 
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="stats"><div class="stat">Temps<br><span id="time">0.0s</span></div></div>
-            <div class="stats"><div class="stat">Passos<br><span id="steps">0</span></div></div>
-          </div>
-        </div>
-
-        <div class="mobile-pad" aria-hidden="false">
+        <div class="mobile-pad" style="position:relative;top:10px">
           <div class="pad-row"><button class="pad-btn" data-dir="up">▲</button></div>
           <div class="pad-row"><button class="pad-btn" data-dir="left">◀</button><div style="width:8px"></div><button class="pad-btn" data-dir="right">▶</button></div>
           <div class="pad-row"><button class="pad-btn" data-dir="down">▼</button></div>
         </div>
-
-        <p class="muted" style="width:100%;text-align:center;margin-top:6px">Controls: fletxes o WASD. En dispositius mòbils utilitza el pad.</p>
       </div>
+
+      <p id="score">Passos: <span id="steps">0</span> · Temps: <span id="time">0.0s</span></p>
     </section>
 
-    <aside class="panel" aria-labelledby="aboutTitle">
-      <h1 id="aboutTitle">Sobre</h1>
-      <p class="muted">Aquest laberint es genera proceduralment amb l'algorisme DFS. L'objectiu és arribar a la meta verda.</p>
-      <h1 style="margin-top:12px">Enllaços</h1>
-      <p><a class="muted" href="https://lagg.netlify.app/serpiente" target="_blank" rel="noreferrer">Serpiente</a></p>
-      <p><a class="muted" href="https://lagg.netlify.app/memovisual" target="_blank" rel="noreferrer">Memo-visual</a></p>
-    </aside>
+    <aside class="panel" style="max-width:420px">
+      <div style="background:transparent;padding:12px;border-radius:10px">
+        <h2 style="margin-bottom:6px;color:var(--accent)">Controls</h2>
+        <p class="muted" style="margin-bottom:6px">Fletxes o WASD; en mòbil usa el pad groc. Prem "Mostra camí" per veure la solució.</p>
 
-    <footer>Prova de laberint — disseny estil LAG</footer>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+          <label style="color:var(--muted);font-weight:700">Mida</label>
+          <select id="sizeSelect" style="margin-left:8px;background:#07131a;color:var(--accent);border:1px solid rgba(255,255,255,0.04);padding:6px;border-radius:8px">
+            <option value="11">11×11</option>
+            <option value="17">17×17</option>
+            <option value="23" selected>23×23</option>
+            <option value="31">31×31</option>
+          </select>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button id="restartBtn" style="background:var(--btn-bg);color:var(--btn-fg);padding:8px 12px;border-radius:8px;border:0;font-weight:800">Reinicia</button>
+          <button id="solveBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--accent);padding:8px 12px;border-radius:8px;font-weight:700">Mostra camí</button>
+        </div>
+
+        <p style="margin-top:14px;color:#cfeea6;font-weight:700">Sobre</p>
+        <p class="muted" style="font-size:13px">Laberint generat per DFS. S'ha adaptat l'interfície perquè sembli el teu joc de la serp: botons grans sobre el canvas, tamany compacte i pad mòbil.</p>
+      </div>
+    </aside>
   </main>
 
-  <!-- First-visit modal -->
-  <div id="fv" class="fv-backdrop" role="dialog" aria-modal="true" style="display:none">
-    <div class="fv-modal">
-      <div class="fv-header">
-        <div class="fv-title">Benvingut al Laberint</div>
-        <button class="fv-close" id="fvClose">Començar</button>
-      </div>
-      <div class="fv-body">
-        <p style="margin-top:0">Benvingut! Mou el punt groc amb les fletxes o WASD. Pots canviar la mida del laberint a la dreta i prémer "Mostra camí" per veure la solució des de la teva posició actual. En mànic, utilitza el pad direccional.</p>
-        <p class="muted">Consell: els laberints amb mida imparell garanteixen una sola solució perfecta generada amb DFS.</p>
-      </div>
-    </div>
-  </div>
-
 <script>
-/* Joc: generador DFS, render canvas, moviment, solve BFS, modal primer cop */
+/* Laberint compacte: DFS generator, render, moviment, solve BFS, botons similars a snake */
 (() => {
   const canvas = document.getElementById('mazeCanvas');
   const ctx = canvas.getContext('2d');
+  const startButton = document.getElementById('startButton');
+  const pauseContinue = document.getElementById('pauseContinue');
+  const pauseReset = document.getElementById('pauseReset');
+  const gameOverReset = document.getElementById('gameOverReset');
   const restartBtn = document.getElementById('restartBtn');
   const solveBtn = document.getElementById('solveBtn');
   const sizeSelect = document.getElementById('sizeSelect');
-  const timeEl = document.getElementById('time');
   const stepsEl = document.getElementById('steps');
+  const timeEl = document.getElementById('time');
   const padBtns = document.querySelectorAll('.pad-btn');
-  const fv = document.getElementById('fv');
-  const fvClose = document.getElementById('fvClose');
 
   let cols = parseInt(sizeSelect.value,10);
   let rows = cols;
@@ -153,26 +171,21 @@
   let player = {x:0,y:0};
   let goal = {x:cols-1,y:rows-1};
   let steps = 0;
-  let startTime = performance.now();
-  let timerId = null;
+  let startTime = 0;
+  let running = false;
+  let animTimer = null;
   let solvingPath = null;
-  let cellPx = 28;
+  let cellPx = 16; // logical size per cell for drawing scale
+  let moveDelay = 120; // ms between automatic moves (only used when auto-moving; here we step with keys)
 
+  // responsive canvas fit (keep square)
   function fitCanvas(){
-    // manté canvas quadrat i adapta a l'amplada disponible
-    const parentWidth = Math.min(780, Math.max(320, Math.floor(window.innerWidth * 0.55)));
-    canvas.width = parentWidth;
-    canvas.height = parentWidth;
-    cellPx = Math.floor(canvas.width / cols);
+    const wrap = canvas.parentElement.clientWidth;
+    canvas.width = wrap;
+    canvas.height = wrap;
     draw();
   }
   window.addEventListener('resize', fitCanvas);
-
-  function updateTimer(){
-    const elapsed = (performance.now() - startTime) / 1000;
-    timeEl.textContent = elapsed.toFixed(1) + 's';
-    timerId = requestAnimationFrame(updateTimer);
-  }
 
   function initMaze(){
     cols = parseInt(sizeSelect.value,10);
@@ -214,7 +227,7 @@
         stack.push(nxt);
       } else stack.pop();
     }
-    // ensure openings
+    // openings
     maze[0][0].walls[3] = false;
     maze[rows-1][cols-1].walls[1] = false;
 
@@ -223,28 +236,37 @@
     steps = 0;
     startTime = performance.now();
     solvingPath = null;
+    running = false;
     updateStats();
     fitCanvas();
-    if(timerId) cancelAnimationFrame(timerId);
-    timerId = requestAnimationFrame(updateTimer);
+    showStartOverlay(true);
+    if(animTimer) cancelAnimationFrame(animTimer);
+    animTimer = requestAnimationFrame(tickTimer);
   }
 
   function updateStats(){
     stepsEl.textContent = steps;
+    timeEl.textContent = ((performance.now()-startTime)/1000).toFixed(1) + 's';
+  }
+
+  function tickTimer(){
+    if(running){
+      updateStats();
+    }
+    animTimer = requestAnimationFrame(tickTimer);
   }
 
   function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     const cs = Math.floor(canvas.width / cols);
     // background
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--floor') || '#001a33';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--floor') || '#111827';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
     // walls
     ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--wall') || '#0b3d91';
-    ctx.lineWidth = Math.max(2, cs/12);
+    ctx.lineWidth = Math.max(1, cs/12);
     ctx.lineCap = 'square';
-
     for(let y=0;y<rows;y++){
       for(let x=0;x<cols;x++){
         const cell = maze[y][x];
@@ -260,20 +282,18 @@
 
     // solution path
     if(solvingPath){
-      ctx.fillStyle = 'rgba(124,207,53,0.14)';
+      ctx.fillStyle = 'rgba(124,207,53,0.12)';
       for(const p of solvingPath){
         ctx.fillRect(p.x*cs+1, p.y*cs+1, cs-2, cs-2);
       }
     }
 
-    // goal
+    // goal marker (small green square)
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--goal') || '#7CCF35';
-    ctx.beginPath();
-    ctx.arc(goal.x*cs + cs/2, goal.y*cs + cs/2, cs*0.30, 0, Math.PI*2);
-    ctx.fill();
+    ctx.fillRect(goal.x*cs + cs*0.18, goal.y*cs + cs*0.18, cs*0.64, cs*0.64);
 
-    // player
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--player') || '#ffbf69';
+    // player (circle)
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--player') || '#FFBF69';
     ctx.beginPath();
     ctx.arc(player.x*cs + cs/2, player.y*cs + cs/2, cs*0.28, 0, Math.PI*2);
     ctx.fill();
@@ -306,8 +326,9 @@
 
   function checkWin(){
     if(player.x===goal.x && player.y===goal.y){
-      const elapsed = ((performance.now()-startTime)/1000).toFixed(2);
-      setTimeout(()=> alert(`Has guanyat! Temps: ${elapsed}s  Passos: ${steps}`), 120);
+      running = false;
+      showGameOver();
+      setTimeout(()=> alert(`Has guanyat! Temps: ${((performance.now()-startTime)/1000).toFixed(2)}s  Passos: ${steps}`), 120);
     }
   }
 
@@ -343,17 +364,18 @@
         if(!visited[ny][nx]){
           visited[ny][nx] = true;
           parent[ny][nx] = cur;
-          q.push({x:nx,y:ny});
+          q.push({x:nx,y:nx===undefined?0:ny});
         }
       }
     }
   }
 
-  // keyboard controls with simple rate limit
+  // keyboard controls (no auto-move): small debounce for fluid movement
   let lastMove = 0;
   window.addEventListener('keydown',(e)=>{
+    if(!running) return;
     const now = performance.now();
-    if(now - lastMove < 60) return; // tiny debounce for fluid control
+    if(now - lastMove < 60) return;
     const k = e.key.toLowerCase();
     let moved = false;
     if(k==='arrowup' || k==='w') moved = tryMove('up');
@@ -363,30 +385,50 @@
     if(moved) lastMove = now;
   });
 
+  // pad buttons
   padBtns.forEach(btn=>{
-    btn.addEventListener('click', ()=> tryMove(btn.dataset.dir));
+    btn.addEventListener('click', ()=> {
+      if(!running) return;
+      tryMove(btn.dataset.dir);
+    });
   });
 
-  // UI events
-  restartBtn.addEventListener('click', ()=> initMaze());
-  solveBtn.addEventListener('click', ()=> solveMaze());
-  sizeSelect.addEventListener('change', ()=> initMaze());
-
-  // modal first visit: simple localStorage flag
-  function showFV(){
-    const seen = localStorage.getItem('lag_maze_seen_v1');
-    if(!seen){
-      fv.style.display = 'flex';
-    }
+  // UI handlers
+  function showStartOverlay(show){
+    startButton.style.display = show ? 'block' : 'none';
+    pauseContinue.style.display = show ? 'none' : (window.innerWidth<=560 ? 'block' : 'none');
+    pauseReset.style.display = show ? 'none' : (window.innerWidth<=560 ? 'block' : 'none');
+    gameOverReset.style.display = 'none';
   }
-  fvClose.addEventListener('click', ()=>{
-    localStorage.setItem('lag_maze_seen_v1','1');
-    fv.style.display = 'none';
+  function showGameOver(){
+    startButton.style.display = 'none';
+    pauseContinue.style.display = 'none';
+    pauseReset.style.display = 'none';
+    gameOverReset.style.display = 'block';
+  }
+
+  startButton.addEventListener('click', ()=>{
+    running = true;
+    startTime = performance.now();
+    showStartOverlay(false);
+    draw();
   });
+
+  pauseContinue.addEventListener('click', ()=>{
+    running = !running;
+    pauseContinue.textContent = running ? '⏸' : '⏯';
+  });
+  pauseReset.addEventListener('click', ()=> initMaze());
+  gameOverReset.addEventListener('click', ()=> initMaze());
+  restartBtn.addEventListener('click', ()=> initMaze());
+  solveBtn.addEventListener('click', ()=> { solvingPath = null; solveMaze(); });
+
+  sizeSelect.addEventListener('change', ()=> initMaze());
 
   // initial boot
   initMaze();
-  showFV();
+  // ensure canvas fits
+  setTimeout(fitCanvas,50);
 })();
 </script>
 </body>
