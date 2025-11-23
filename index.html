@@ -23,7 +23,6 @@
       color: var(--accent);
     }
 
-    /* Barra de navegació */
     nav {
       background-color: var(--nav-bg);
       padding: 1rem 2rem;
@@ -32,35 +31,21 @@
       z-index: 100;
     }
 
-    nav ul {
-      list-style: none;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 0;
-      padding: 0;
-    }
+    nav ul { list-style:none; display:flex; justify-content:space-between; align-items:center; margin:0; padding:0; }
+    nav li.logo { display:flex; align-items:center; }
+    nav li.logo a { display:flex; align-items:center; text-decoration:none; }
+    nav li.logo img { height:60px; margin-right:0.5rem; vertical-align:middle; }
+    nav a { color:white; text-decoration:none; font-weight:bold; transition:color 0.3s; }
+    nav a:hover { color:#ffff66; }
 
-    nav li.logo { display: flex; align-items: center; }
-    nav li.logo a { display: flex; align-items: center; text-decoration: none; }
-    nav li.logo img { height: 60px; margin-right: 0.5rem; vertical-align: middle; }
+    h1 { font-size:28px; margin:30px 0 10px 0; }
 
-    nav a { color: white; text-decoration: none; font-weight: bold; transition: color 0.3s; }
-    nav a:hover { color: #ffff66; }
+    .enllac { font-size:24px; color:var(--link-red); text-decoration:underline; font-weight:bold; }
+    .enllac:hover { color:var(--link-red-hover); }
 
-    h1 { font-size: 28px; margin: 30px 0 10px 0; }
+    main { padding:2rem; min-height: calc(100vh - 120px); }
 
-    .enllac {
-      font-size: 24px;
-      color: var(--link-red);
-      text-decoration: underline;
-      font-weight: bold;
-    }
-    .enllac:hover { color: var(--link-red-hover); }
-
-    main { padding: 2rem; min-height: calc(100vh - 120px); }
-
-    /* ---------- Modal primer cop ---------- */
+    /* Modal primer cop: ara més alt (80vh) */
     .fv-backdrop {
       position: fixed;
       inset: 0;
@@ -75,9 +60,10 @@
     .fv-modal {
       background: linear-gradient(180deg,#001829 0%, #00283a 100%);
       border-radius: 10px;
-      width: 700px;
-      max-width: 95%;
-      max-height: 95%;
+      width: 780px;
+      max-width: 98%;
+      height: 80vh; /* <-- augmentat aquí */
+      max-height: 95vh;
       box-shadow: 0 12px 30px rgba(0,0,0,0.6);
       display: flex;
       flex-direction: column;
@@ -97,7 +83,6 @@
     }
 
     .fv-title { font-size: 16px; }
-
     .fv-close {
       background: transparent;
       border: 1px solid rgba(255,255,255,0.08);
@@ -108,30 +93,16 @@
       font-size: 14px;
     }
 
-    /* Important: iframe wrap transparent i iframe ocupa tot l'alçada restant */
-    .fv-iframe-wrap {
-      background: transparent;
-      flex: 1 1 auto;
-      display: block;
-      min-height: 0; /* evita overflow que crea la franja blanca */
-    }
-
-    .fv-iframe {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      display:block;
-      background: transparent;
-    }
+    .fv-iframe-wrap { background: transparent; flex: 1 1 auto; display: block; min-height: 0; }
+    .fv-iframe { width:100%; height:100%; border:0; display:block; background:transparent; }
 
     @media (max-width:720px) {
-      .fv-modal { width: 100%; height: 90%; border-radius: 8px; }
+      .fv-modal { width: 100%; height: 95vh; border-radius: 8px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Barra de navegació -->
   <nav>
     <ul>
       <li class="logo">
@@ -143,7 +114,6 @@
     </ul>
   </nav>
 
-  <!-- Contingut principal -->
   <main>
     <h1>Juego de la Serpiente:</h1>
     <a class="enllac" href="https://lagg.netlify.app/serpiente">serpiente</a>
@@ -152,7 +122,6 @@
     <a class="enllac" href="https://lagg.netlify.app/memovisual">Memo-visual</a>
   </main>
 
-  <!-- Script del modal -->
   <script>
     (function () {
       var STORAGE_KEY = 'lag_first_visit_form_seen_v1';
@@ -160,9 +129,7 @@
 
       try {
         if (localStorage && localStorage.getItem(STORAGE_KEY)) return;
-      } catch (e) {
-        // si localStorage falla, seguim endavant per mostrar el modal
-      }
+      } catch (e) {}
 
       function buildModal() {
         var backdrop = document.createElement('div');
@@ -204,39 +171,24 @@
         modal.appendChild(iframeWrap);
         backdrop.appendChild(modal);
 
-        // tancament i control de localStorage
         function close(saveFlag) {
-          try {
-            if (saveFlag !== false && localStorage) localStorage.setItem(STORAGE_KEY, '1');
-          } catch (e) {}
+          try { if (saveFlag !== false && localStorage) localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
           if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
           document.removeEventListener('keydown', onKeyDown);
         }
 
         closeBtn.addEventListener('click', function () { close(true); });
+        backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(true); });
 
-        backdrop.addEventListener('click', function (e) {
-          if (e.target === backdrop) close(true);
-        });
-
-        function onKeyDown(e) {
-          if (e.key === 'Escape') { e.preventDefault(); close(true); }
-        }
+        function onKeyDown(e) { if (e.key === 'Escape') { e.preventDefault(); close(true); } }
         document.addEventListener('keydown', onKeyDown);
 
-        // Detectem submits mitjançant events load successius
-        // El primer load és la càrrega inicial; després d'enviar el formulari Google Forms fa un nou load amb la pàgina de confirmació
         var loadCount = 0;
         iframe.addEventListener('load', function () {
           loadCount++;
-          // Si veiem més d'un load (normalment 2) tancarem automàticament
-          if (loadCount > 1) {
-            // petites pauses per garantir que la confirmació es mostri abans de tancar
-            setTimeout(function () { close(true); }, 600);
-          }
+          if (loadCount > 1) { setTimeout(function () { close(true); }, 600); }
         });
 
-        // focus en botó per accessibilitat
         setTimeout(function () { closeBtn.focus(); }, 50);
 
         return backdrop;
@@ -245,7 +197,6 @@
       document.addEventListener('DOMContentLoaded', function () {
         var modal = buildModal();
         document.body.appendChild(modal);
-        // Guardem la clau ara mateix per evitar reaparicions encara que l'usuari tanqui la pestanya sense tancar el modal
         try { if (localStorage) localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
       }, { once: true });
     })();
