@@ -3,24 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Joc de laberint | LAG</title>
+  <title>Laberint per Nivells | LAG</title>
   <link rel="icon" href="assets/favicon.png" type="image/png" />
   <style>
     :root{
       --bg:#002244;
-      --panel:#0b2a44;
       --accent:#FFDF20;
       --accent-2:#FB2C36;
-      --muted:#888;
+      --muted:rgba(255,255,255,0.08);
       --wall:#0b3d91;
-      --floor:#111827;
+      --floor:#081728;
       --player:#FFBF69;
       --goal:#7CCF35;
-      --btn-bg: #FFDF20;
-      --btn-fg: #FB2C36;
-      --wrap-w:400px;
+      --canvas-size:520px; /* mida fixa del canvas */
+      --grid-size:23; /* nombre de cel·les per costat (imparell recomanat) */
     }
-
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
     body{
@@ -28,179 +25,159 @@
       background:var(--bg);
       color:#FAFAF9;
       display:flex;
-      align-items:flex-start;
-      justify-content:center;
-      padding:22px 12px;
+      flex-direction:column;
+      align-items:center;
       gap:12px;
+      padding:18px;
     }
 
+    /* Barra superior centrada */
     nav{
-      position:sticky;top:0;width:100%;max-width:920px;background:rgba(0,0,0,0.6);
-      padding:14px 18px;border-radius:8px;margin-bottom:10px;
+      width:100%;
+      max-width:980px;
+      background:rgba(0,0,0,0.65);
+      padding:14px 18px;
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
     }
-    nav ul{display:flex;justify-content:space-between;align-items:center;list-style:none}
-    nav li.logo img{height:52px}
+    nav .left {display:flex;align-items:center;gap:10px}
+    nav img{height:44px}
     nav a{color:#fff;text-decoration:none;font-weight:700}
     nav a:hover{color:#ffff66}
 
-    main{width:100%;max-width:920px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+    /* Layout central */
+    main{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:980px}
+    .meta{display:flex;gap:10px;align-items:center}
 
-    /* compacte game wrap */
-    #gameWrap{position:relative;width:var(--wrap-w);min-width:260px}
-    canvas{width:100%;height:auto;display:block;background:var(--floor);border:2px solid #222;border-radius:6px}
-    h1{font-size:18px;margin-bottom:8px;text-align:center}
-
-    /* botons sobre el canvas */
+    /* Canvas mida fixa (sempre la mateixa mida visual) */
+    #gameWrap{position:relative;width:var(--canvas-size);height:var(--canvas-size)}
+    canvas{width:var(--canvas-size);height:var(--canvas-size);display:block;background:var(--floor);border-radius:8px;border:2px solid rgba(255,255,255,0.03)}
+    /* Botons sobre canvas */
     .canvas-button{
-      position:absolute;
-      background:var(--btn-bg);
-      color:var(--btn-fg);
-      border:1px solid rgba(0,0,0,0.25);
-      padding:8px 12px;
-      font-size:14px;
-      cursor:pointer;
-      border-radius:8px;
-      box-shadow:0 6px 18px rgba(0,0,0,0.45);
-      user-select:none;
-      z-index:30;
-      transform:translateX(-50%);
-      white-space:nowrap;
+      position:absolute;background:var(--accent);color:#0b2218;border:0;padding:8px 12px;border-radius:8px;font-weight:800;cursor:pointer;z-index:30;box-shadow:0 10px 24px rgba(0,0,0,0.5)
     }
-    #startButton{left:50%;top:50%;transform:translate(-50%,-50%);font-weight:800}
-    #pauseContinue{left:50%;top:12px;transform:translateX(-50%);display:none}
-    #pauseReset{left:calc(100% - 14px);top:12px;transform:translate(-100%,0);display:none}
-    #gameOverReset{left:50%;top:50%;transform:translate(-50%,-50%);display:none}
+    #startButton{left:50%;top:50%;transform:translate(-50%,-50%)}
+    #nextLevelBtn{left:50%;top:50%;transform:translate(-50%,-50%);display:none}
+    #pauseBtn{right:12px;top:12px;transform:none;background:transparent;color:var(--accent);border:1px solid var(--muted);padding:6px 8px}
+    #solveBtn{left:12px;top:12px;transform:none;background:transparent;color:var(--accent);border:1px solid var(--muted);padding:6px 8px}
 
-    .hidden{display:none}
-    #score{color:var(--muted);font-size:14px;text-align:center;margin-top:8px}
+    /* Indicadors a sobre del canvas (nivell, passos, temps) */
+    .hud{
+      position:absolute;left:12px;bottom:12px;padding:8px 10px;background:rgba(0,0,0,0.45);border-radius:8px;color:#dff6c5;font-weight:700;z-index:20;font-size:13px;
+      display:flex;gap:12px;align-items:center;
+    }
 
-    /* controls / pad (visible a mòbil) */
-    .mobile-pad{display:none;margin-top:10px;gap:8px;justify-content:center}
-    .pad-row{display:flex;gap:8px;justify-content:center}
-    .pad-btn{width:48px;height:48px;border-radius:8px;background:#07131a;border:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:800;cursor:pointer}
+    /* Respon a pantalles petites */
     @media (max-width:560px){
-      #gameWrap{width:92vw;max-width:420px}
-      .pad-row{gap:6px}
-      .mobile-pad{display:flex;flex-direction:column}
-      #pauseContinue{display:block}
-      #pauseReset{display:block}
+      :root{--canvas-size:92vw}
+      nav{padding:10px;border-radius:8px}
+      canvas{border-radius:6px}
+      .canvas-button{padding:8px 10px}
+      #pauseBtn,#solveBtn{display:block}
     }
 
-    /* info panel */
-    .panel{background:transparent;color:var(--accent);max-width:420px}
-    .muted{color:#d3eab2}
+    /* estètica adicional */
+    aside.info{color:#cfeea6;font-size:13px;margin-top:6px;text-align:center}
   </style>
 </head>
 <body>
-  <nav style="max-width:920px;">
-    <ul>
-      <li class="logo"><a href="https://lagg.netlify.app"><img src="assets/logo.png" alt="logo"></a></li>
-      <li style="display:flex;gap:18px;align-items:center">
-        <a href="https://lagg.netlify.app">Inici</a>
-        <a href="https://lagg.netlify.app/contacte">Contactar</a>
-      </li>
-    </ul>
+  <nav>
+    <div class="left">
+      <a href="index.html"><img src="assets/logo.png" alt="Logo LAG"></a>
+      <a href="https://lagg.netlify.app" style="color:#fff;">Inici</a>
+    </div>
+    <div><a href="https://lagg.netlify.app/contacte">Contactar</a></div>
   </nav>
 
   <main>
-    <section id="gameArea" style="display:flex;flex-direction:column;align-items:center;gap:6px">
-      <h1>🔷 Laberint compacte</h1>
-      <div id="gameWrap" aria-live="polite">
-        <canvas id="mazeCanvas" width="400" height="400" aria-label="Laberint"></canvas>
+    <div class="meta">
+      <div style="color:#cfeea6;font-weight:800">Laberint per Nivells</div>
+      <div style="color:rgba(255,255,255,0.65)">Mida de la graella: <strong id="gridLabel"></strong>×<strong id="gridLabel2"></strong></div>
+      <div style="color:rgba(255,255,255,0.65)">Nivell: <strong id="levelLabel">1</strong></div>
+    </div>
 
-        <button id="startButton" class="canvas-button" aria-label="Començar">▶️ Començar</button>
-        <button id="pauseContinue" class="canvas-button" aria-label="Pausa Continuar">⏯</button>
-        <button id="pauseReset" class="canvas-button" aria-label="Reiniciar">🔁</button>
-        <button id="gameOverReset" class="canvas-button" aria-label="Reiniciar final">🔁 Reiniciar</button>
+    <div id="gameWrap" aria-live="polite">
+      <canvas id="mazeCanvas" width="700" height="700" aria-label="Laberint"></canvas>
 
-        <div class="mobile-pad" style="position:relative;top:10px">
-          <div class="pad-row"><button class="pad-btn" data-dir="up">▲</button></div>
-          <div class="pad-row"><button class="pad-btn" data-dir="left">◀</button><div style="width:8px"></div><button class="pad-btn" data-dir="right">▶</button></div>
-          <div class="pad-row"><button class="pad-btn" data-dir="down">▼</button></div>
-        </div>
+      <button id="startButton" class="canvas-button" aria-label="Començar">▶️ Començar</button>
+      <button id="nextLevelBtn" class="canvas-button" aria-label="Següent nivell">➡️ Següent nivell</button>
+      <button id="pauseBtn" class="canvas-button" aria-label="Pausa" style="display:none">⏸</button>
+      <button id="solveBtn" class="canvas-button" aria-label="Mostra camí" style="display:none">🧭 Mostra camí</button>
+
+      <div class="hud" id="hud">
+        <div>Temps: <span id="time">0.0s</span></div>
+        <div>Passos: <span id="steps">0</span></div>
       </div>
+    </div>
 
-      <p id="score">Passos: <span id="steps">0</span> · Temps: <span id="time">0.0s</span></p>
-    </section>
-
-    <aside class="panel" style="max-width:420px">
-      <div style="background:transparent;padding:12px;border-radius:10px">
-        <h2 style="margin-bottom:6px;color:var(--accent)">Controls</h2>
-        <p class="muted" style="margin-bottom:6px">Fletxes o WASD; en mòbil usa el pad groc. Prem "Mostra camí" per veure la solució.</p>
-
-        <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-          <label style="color:var(--muted);font-weight:700">Mida</label>
-          <select id="sizeSelect" style="margin-left:8px;background:#07131a;color:var(--accent);border:1px solid rgba(255,255,255,0.04);padding:6px;border-radius:8px">
-            <option value="11">11×11</option>
-            <option value="17">17×17</option>
-            <option value="23" selected>23×23</option>
-            <option value="31">31×31</option>
-          </select>
-        </div>
-
-        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-          <button id="restartBtn" style="background:var(--btn-bg);color:var(--btn-fg);padding:8px 12px;border-radius:8px;border:0;font-weight:800">Reinicia</button>
-          <button id="solveBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--accent);padding:8px 12px;border-radius:8px;font-weight:700">Mostra camí</button>
-        </div>
-
-        <p style="margin-top:14px;color:#cfeea6;font-weight:700">Sobre</p>
-        <p class="muted" style="font-size:13px">Laberint generat per DFS. S'ha adaptat l'interfície perquè sembli el teu joc de la serp: botons grans sobre el canvas, tamany compacte i pad mòbil.</p>
-      </div>
-    </aside>
+    <aside class="info">El laberint conserva la mateixa mida; cada nivell exigeix un camí mínim més llarg (més difícil).</aside>
   </main>
 
 <script>
-/* Laberint compacte: DFS generator, render, moviment, solve BFS, botons similars a snake */
+/* Laberint per nivells: mateixa mida, dificultat incrementant en funció de la longitud mínima del camí */
 (() => {
   const canvas = document.getElementById('mazeCanvas');
   const ctx = canvas.getContext('2d');
   const startButton = document.getElementById('startButton');
-  const pauseContinue = document.getElementById('pauseContinue');
-  const pauseReset = document.getElementById('pauseReset');
-  const gameOverReset = document.getElementById('gameOverReset');
-  const restartBtn = document.getElementById('restartBtn');
+  const nextLevelBtn = document.getElementById('nextLevelBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
   const solveBtn = document.getElementById('solveBtn');
-  const sizeSelect = document.getElementById('sizeSelect');
-  const stepsEl = document.getElementById('steps');
   const timeEl = document.getElementById('time');
-  const padBtns = document.querySelectorAll('.pad-btn');
+  const stepsEl = document.getElementById('steps');
+  const levelLabel = document.getElementById('levelLabel');
+  const gridLabel = document.getElementById('gridLabel');
+  const gridLabel2 = document.getElementById('gridLabel2');
 
-  let cols = parseInt(sizeSelect.value,10);
-  let rows = cols;
+  // configuració
+  const GRID = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--grid-size')) || 23; // cel·les per costat
+  const CANVAS_PX = 700; // base logical drawing resolution (will scale with CSS)
+  canvas.width = CANVAS_PX;
+  canvas.height = CANVAS_PX;
+
+  let cols = GRID, rows = GRID;
+  gridLabel.textContent = cols;
+  gridLabel2.textContent = rows;
+
   let maze = [];
   let player = {x:0,y:0};
   let goal = {x:cols-1,y:rows-1};
   let steps = 0;
-  let startTime = 0;
   let running = false;
-  let animTimer = null;
+  let startTime = 0;
+  let timerRAF = null;
   let solvingPath = null;
-  let cellPx = 16; // logical size per cell for drawing scale
-  let moveDelay = 120; // ms between automatic moves (only used when auto-moving; here we step with keys)
 
-  // responsive canvas fit (keep square)
-  function fitCanvas(){
-    const wrap = canvas.parentElement.clientWidth;
-    canvas.width = wrap;
-    canvas.height = wrap;
-    draw();
-  }
-  window.addEventListener('resize', fitCanvas);
+  // nivell i criteri de dificultat:
+  let level = 1;
+  const baseMinPath = Math.floor((cols + rows) / 3); // camí mínim base
+  const perLevelIncrease = Math.floor((cols + rows) / 12); // increment per nivell
 
-  function initMaze(){
-    cols = parseInt(sizeSelect.value,10);
-    rows = cols;
-    maze = [];
-    for(let y=0;y<rows;y++){
-      const row = [];
-      for(let x=0;x<cols;x++){
-        row.push({x,y,visited:false,walls:[true,true,true,true]});
-      }
-      maze.push(row);
+  // genera fins que la solució mínima tingui la longitud requerida
+  function generateValidMaze(minPathLen){
+    // intenta generar fins a N intents
+    const maxAttempts = 60;
+    for(let attempt=0; attempt<maxAttempts; attempt++){
+      const m = generateMaze(cols,rows);
+      const shortest = shortestPathLength(m, {x:0,y:0}, {x:cols-1,y:rows-1});
+      if(shortest >= minPathLen) return m;
     }
-    // DFS backtracker
+    // si no troba, torna l'últim generat
+    return generateMaze(cols,rows);
+  }
+
+  // generador DFS que retorna nova matriu
+  function generateMaze(w,h){
+    const grid = [];
+    for(let y=0;y<h;y++){
+      grid[y]=[];
+      for(let x=0;x<w;x++){
+        grid[y][x] = {x,y,visited:false,walls:[true,true,true,true]}; // top,right,bottom,left
+      }
+    }
     const stack = [];
-    const start = maze[0][0];
+    const start = grid[0][0];
     start.visited = true;
     stack.push(start);
     const dirs = [
@@ -214,53 +191,60 @@
       const neighbors = [];
       for(const d of dirs){
         const nx = cur.x + d.dx, ny = cur.y + d.dy;
-        if(nx>=0 && nx<cols && ny>=0 && ny<rows && !maze[ny][nx].visited){
+        if(nx>=0 && nx<w && ny>=0 && ny<h && !grid[ny][nx].visited){
           neighbors.push({d,nx,ny});
         }
       }
       if(neighbors.length){
         const pick = neighbors[Math.floor(Math.random()*neighbors.length)];
-        const nxt = maze[pick.ny][pick.nx];
+        const nxt = grid[pick.ny][pick.nx];
         cur.walls[pick.d.wall] = false;
         nxt.walls[pick.d.opp] = false;
         nxt.visited = true;
         stack.push(nxt);
       } else stack.pop();
     }
-    // openings
-    maze[0][0].walls[3] = false;
-    maze[rows-1][cols-1].walls[1] = false;
-
-    player = {x:0,y:0};
-    goal = {x:cols-1,y:rows-1};
-    steps = 0;
-    startTime = performance.now();
-    solvingPath = null;
-    running = false;
-    updateStats();
-    fitCanvas();
-    showStartOverlay(true);
-    if(animTimer) cancelAnimationFrame(animTimer);
-    animTimer = requestAnimationFrame(tickTimer);
+    // assegura obertures d'entrada i sortida
+    grid[0][0].walls[3] = false;
+    grid[h-1][w-1].walls[1] = false;
+    return grid;
   }
 
-  function updateStats(){
-    stepsEl.textContent = steps;
-    timeEl.textContent = ((performance.now()-startTime)/1000).toFixed(1) + 's';
-  }
-
-  function tickTimer(){
-    if(running){
-      updateStats();
+  // BFS per longitud mínima (retorna longitud en nombres de cel·les)
+  function shortestPathLength(m, start, goal){
+    const h = m.length, w = m[0].length;
+    const q = [];
+    const visited = Array(h).fill(0).map(()=>Array(w).fill(false));
+    q.push({x:start.x,y:start.y,d:0});
+    visited[start.y][start.x]=true;
+    while(q.length){
+      const cur = q.shift();
+      if(cur.x===goal.x && cur.y===goal.y) return cur.d;
+      const dirs = [
+        {dir:'up',dx:0,dy:-1, check:()=> !m[cur.y][cur.x].walls[0]},
+        {dir:'right',dx:1,dy:0, check:()=> !m[cur.y][cur.x].walls[1]},
+        {dir:'down',dx:0,dy:1, check:()=> !m[cur.y][cur.x].walls[2]},
+        {dir:'left',dx:-1,dy:0, check:()=> !m[cur.y][cur.x].walls[3]},
+      ];
+      for(const d of dirs){
+        if(!d.check()) continue;
+        const nx = cur.x + d.dx, ny = cur.y + d.dy;
+        if(nx<0||ny<0||nx>=w||ny>=h) continue;
+        if(!visited[ny][nx]){
+          visited[ny][nx]=true;
+          q.push({x:nx,y:ny,d:cur.d+1});
+        }
+      }
     }
-    animTimer = requestAnimationFrame(tickTimer);
+    return Infinity;
   }
 
+  // dibuixa el laberint i elements
   function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    const cs = Math.floor(canvas.width / cols);
+    const cs = canvas.width / cols;
     // background
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--floor') || '#111827';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--floor') || '#081728';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
     // walls
@@ -280,7 +264,7 @@
       }
     }
 
-    // solution path
+    // solució (si activa)
     if(solvingPath){
       ctx.fillStyle = 'rgba(124,207,53,0.12)';
       for(const p of solvingPath){
@@ -288,11 +272,13 @@
       }
     }
 
-    // goal marker (small green square)
+    // goal
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--goal') || '#7CCF35';
-    ctx.fillRect(goal.x*cs + cs*0.18, goal.y*cs + cs*0.18, cs*0.64, cs*0.64);
+    ctx.beginPath();
+    ctx.arc(goal.x*cs + cs/2, goal.y*cs + cs/2, cs*0.32, 0, Math.PI*2);
+    ctx.fill();
 
-    // player (circle)
+    // player
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--player') || '#FFBF69';
     ctx.beginPath();
     ctx.arc(player.x*cs + cs/2, player.y*cs + cs/2, cs*0.28, 0, Math.PI*2);
@@ -309,6 +295,7 @@
   }
 
   function tryMove(dir){
+    if(!running) return false;
     if(!canMoveFrom(player.x,player.y,dir)) return false;
     let nx = player.x, ny = player.y;
     if(dir==='up') ny--;
@@ -318,7 +305,7 @@
     if(nx<0||ny<0||nx>=cols||ny>=rows) return false;
     player.x = nx; player.y = ny;
     steps++;
-    updateStats();
+    updateHUD();
     draw();
     checkWin();
     return true;
@@ -327,17 +314,21 @@
   function checkWin(){
     if(player.x===goal.x && player.y===goal.y){
       running = false;
-      showGameOver();
-      setTimeout(()=> alert(`Has guanyat! Temps: ${((performance.now()-startTime)/1000).toFixed(2)}s  Passos: ${steps}`), 120);
+      startButton.style.display = 'none';
+      nextLevelBtn.style.display = 'block';
+      pauseBtn.style.display = 'none';
+      solveBtn.style.display = 'none';
+      setTimeout(()=> alert(`Has guanyat el nivell ${level}! Temps: ${((performance.now()-startTime)/1000).toFixed(2)}s  Passos: ${steps}`), 80);
     }
   }
 
-  function solveMaze(){
+  // BFS per obtenir camí (array)
+  function findPath(m, start, goal){
     const q = [];
     const visited = Array(rows).fill(0).map(()=>Array(cols).fill(false));
     const parent = Array(rows).fill(0).map(()=>Array(cols).fill(null));
-    q.push({x:player.x,y:player.y});
-    visited[player.y][player.x] = true;
+    q.push({x:start.x,y:start.y});
+    visited[start.y][start.x] = true;
     while(q.length){
       const cur = q.shift();
       if(cur.x===goal.x && cur.y===goal.y){
@@ -347,9 +338,7 @@
           path.push({x:p.x,y:p.y});
           p = parent[p.y][p.x];
         }
-        solvingPath = path.reverse();
-        draw();
-        return;
+        return path.reverse();
       }
       const dirs = [
         {dir:'up',dx:0,dy:-1},
@@ -358,77 +347,128 @@
         {dir:'left',dx:-1,dy:0},
       ];
       for(const d of dirs){
+        if(!canMoveFrom(cur.x,cur.y,d.dir)) continue;
         const nx = cur.x + d.dx, ny = cur.y + d.dy;
         if(nx<0||ny<0||nx>=cols||ny>=rows) continue;
-        if(!canMoveFrom(cur.x,cur.y,d.dir)) continue;
         if(!visited[ny][nx]){
           visited[ny][nx] = true;
           parent[ny][nx] = cur;
-          q.push({x:nx,y:nx===undefined?0:ny});
+          q.push({x:nx,y:ny});
         }
       }
     }
+    return null;
   }
 
-  // keyboard controls (no auto-move): small debounce for fluid movement
+  function solveMaze(){
+    solvingPath = findPath(maze, player, goal);
+    draw();
+  }
+
+  function updateHUD(){
+    stepsEl.textContent = steps;
+    timeEl.textContent = ((performance.now()-startTime)/1000).toFixed(1) + 's';
+  }
+
+  // controls
   let lastMove = 0;
-  window.addEventListener('keydown',(e)=>{
+  window.addEventListener('keydown', (e)=>{
     if(!running) return;
     const now = performance.now();
     if(now - lastMove < 60) return;
     const k = e.key.toLowerCase();
     let moved = false;
-    if(k==='arrowup' || k==='w') moved = tryMove('up');
-    if(k==='arrowdown' || k==='s') moved = tryMove('down');
-    if(k==='arrowleft' || k==='a') moved = tryMove('left');
-    if(k==='arrowright' || k==='d') moved = tryMove('right');
+    if(k==='arrowup'||k==='w') moved = tryMove('up');
+    if(k==='arrowdown'||k==='s') moved = tryMove('down');
+    if(k==='arrowleft'||k==='a') moved = tryMove('left');
+    if(k==='arrowright'||k==='d') moved = tryMove('right');
     if(moved) lastMove = now;
   });
 
-  // pad buttons
-  padBtns.forEach(btn=>{
-    btn.addEventListener('click', ()=> {
-      if(!running) return;
-      tryMove(btn.dataset.dir);
-    });
+  // pad mòbil (botons superiors)
+  document.querySelectorAll('.pad-btn')?.forEach(btn=>{
+    btn.addEventListener('click', ()=> tryMove(btn.dataset.dir));
   });
 
-  // UI handlers
-  function showStartOverlay(show){
-    startButton.style.display = show ? 'block' : 'none';
-    pauseContinue.style.display = show ? 'none' : (window.innerWidth<=560 ? 'block' : 'none');
-    pauseReset.style.display = show ? 'none' : (window.innerWidth<=560 ? 'block' : 'none');
-    gameOverReset.style.display = 'none';
-  }
-  function showGameOver(){
-    startButton.style.display = 'none';
-    pauseContinue.style.display = 'none';
-    pauseReset.style.display = 'none';
-    gameOverReset.style.display = 'block';
-  }
-
+  // UI events
   startButton.addEventListener('click', ()=>{
     running = true;
     startTime = performance.now();
-    showStartOverlay(false);
-    draw();
+    startButton.style.display = 'none';
+    pauseBtn.style.display = 'block';
+    solveBtn.style.display = 'block';
+    updateHUD();
   });
-
-  pauseContinue.addEventListener('click', ()=>{
+  pauseBtn.addEventListener('click', ()=>{
     running = !running;
-    pauseContinue.textContent = running ? '⏸' : '⏯';
+    pauseBtn.textContent = running ? '⏸' : '⏯';
   });
-  pauseReset.addEventListener('click', ()=> initMaze());
-  gameOverReset.addEventListener('click', ()=> initMaze());
-  restartBtn.addEventListener('click', ()=> initMaze());
-  solveBtn.addEventListener('click', ()=> { solvingPath = null; solveMaze(); });
+  solveBtn.addEventListener('click', ()=> { solveMaze(); });
 
-  sizeSelect.addEventListener('change', ()=> initMaze());
+  nextLevelBtn.addEventListener('click', ()=>{
+    level++;
+    levelLabel.textContent = level;
+    nextLevelBtn.style.display = 'none';
+    startLevel(level);
+  });
 
-  // initial boot
-  initMaze();
-  // ensure canvas fits
-  setTimeout(fitCanvas,50);
+  // inicia un nivell: calcula la longitud mínima requerida i genera laberint fins que compleixi
+  function startLevel(n){
+    const minLen = baseMinPath + (n-1) * perLevelIncrease;
+    // mostra que s'està generant (startButton visible amb text generant)
+    startButton.style.display = 'block';
+    startButton.textContent = 'Generant...';
+    startButton.disabled = true;
+    // genera en background (no blocking per massa temps)
+    setTimeout(()=>{
+      maze = generateValidMaze(minLen);
+      player = {x:0,y:0};
+      goal = {x:cols-1,y:rows-1};
+      steps = 0;
+      startTime = performance.now();
+      running = false;
+      solvingPath = null;
+      updateHUD();
+      draw();
+      startButton.textContent = '▶️ Començar';
+      startButton.disabled = false;
+      pauseBtn.style.display = 'none';
+      solveBtn.style.display = 'none';
+    }, 20);
+  }
+
+  // generador amb criteri — reutilitza funcions anteriors
+  function generateValidMaze(minPathLen){
+    const maxAttempts = 120;
+    let last = null;
+    for(let i=0;i<maxAttempts;i++){
+      const m = generateMaze(cols,rows);
+      last = m;
+      const len = shortestPathLength(m, {x:0,y:0}, {x:cols-1,y:rows-1});
+      if(len >= minPathLen) return m;
+    }
+    return last;
+  }
+
+  // inicial
+  function boot(){
+    level = 1;
+    levelLabel.textContent = level;
+    gridLabel.textContent = cols;
+    gridLabel2.textContent = rows;
+    startLevel(level);
+    // tick per actualitzar el HUD de temps
+    function tick(){
+      if(running) updateHUD();
+      timerRAF = requestAnimationFrame(tick);
+    }
+    timerRAF = requestAnimationFrame(tick);
+  }
+
+  // exposa funcions per debug a consola
+  window.__lab = {regen:()=> startLevel(level), next: ()=> { level++; startLevel(level);}};
+
+  boot();
 })();
 </script>
 </body>
