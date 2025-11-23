@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Laberint — Joc</title>
+<style>
+  :root{
+    --wall:#0b3d91;
+    --floor:#e8f0ff;
+    --player:#ff6b6b;
+    --goal:#2ecc71;
+    --ui-bg:rgba(255,255,255,0.9);
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#cfe2ff,#ffffff);display:flex;align-items:center;justify-content:center}
+  .container{max-width:980px;width:95%;display:grid;grid-template-columns:1fr 260px;gap:18px;align-items:start}
+  canvas{width:100%;height:auto;background:var(--floor);border-radius:10px;box-shadow:0 6px 18px rgba(10,10,30,0.12)}
+  .panel{background:var(--ui-bg);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(10,10,30,0.06)}
+  h3{margin:0 0 8px 0;font-size:16px}
+  label{display:block;margin:8px 0 4px;font-size:13px;color:#234}
+  input[type=range]{width:100%}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .stat{background:#fff;padding:8px;border-radius:8px;flex:1;min-width:90px;text-align:center;font-weight:600}
+  .controls{display:flex;gap:8px;margin-top:10px}
+  button{padding:8px 10px;border-radius:8px;border:0;background:var(--wall);color:white;font-weight:600;cursor:pointer}
+  button.secondary{background:#6c757d}
+  .mobile-pad{display:none;margin-top:12px;gap:6px}
+  .pad-row{display:flex;gap:6px;justify-content:center}
+  .pad-btn{width:56px;height:56px;border-radius:10px;background:#fff;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;cursor:pointer}
+  @media (max-width:900px){
+    .container{grid-template-columns:1fr;align-items:stretch}
+    .mobile-pad{display:block}
+  }
+  footer{grid-column:1/-1;margin-top:8px;text-align:center;color:#445;font-size:13px}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="panel" style="padding:14px;">
+      <canvas id="mazeCanvas" width="700" height="700"></canvas>
+      <div class="mobile-pad">
+        <div class="pad-row"><button class="pad-btn" data-dir="up">▲</button></div>
+        <div class="pad-row"><button class="pad-btn" data-dir="left">◀</button><div style="width:8px"></div><button class="pad-btn" data-dir="right">▶</button></div>
+        <div class="pad-row"><button class="pad-btn" data-dir="down">▼</button></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Controls</h3>
+      <div class="controls">
+        <button id="restartBtn">Reinicia</button>
+        <button class="secondary" id="solveBtn">Mostra camí</button>
+      </div>
+
+      <label>Mida del laberint (cel·les per costat)</label>
+      <input id="sizeRange" type="range" min="7" max="41" value="21" step="2">
+
+      <label>Velocitat (ms per pas del jugador)</label>
+      <input id="speedRange" type="range" min="10" max="300" value="50">
+
+      <div class="stats">
+        <div class="stat">Temps: <span id="time">0.0s</span></div>
+        <div class="stat">Passos: <span id="steps">0</span></div>
+        <div class="stat">Mida: <span id="sizeLabel">21</span>x<span id="sizeLabel2">21</span></div>
+      </div>
+
+      <h3 style="margin-top:12px">Com moure't</h3>
+      <p style="margin:6px 0 0 0;font-size:13px">Fletxes o WASD; en mòbil pots usar el pad de direccions.</p>
+    </div>
+
+    <footer>Joc de laberint generat proceduralment — Pressiona la meta per guanyar</footer>
+  </div>
+
+<script>
+/* Laberint: generador amb DFS, render en canvas, moviment del jugador, solve simple BFS */
+(() => {
+  const canvas = document.getElementById('mazeCanvas');
+  const ctx = canvas.getContext('2d');
+  const restartBtn = document.getElementById('restartBtn');
+  const solveBtn = document.getElementById('solveBtn');
+  const sizeRange = document.getElementById('sizeRange');
+  const speedRange = document.getElementById('speedRange');
+  const timeEl = document.getElementById('time');
+  const stepsEl = document.getElementById('steps');
+  const sizeLabel = document.getElementById('sizeLabel');
+  const sizeLabel2 = document.getElementById('sizeLabel2');
+  const padBtns = document.querySelectorAll('.pad-btn');
+
+  let cellCount = parseInt(sizeRange.value,10); // must be odd for perfect maze
+  let cellSize = 28;
+  let maze, cols, rows;
+  let player, goal;
+  let steps = 0;
+  let tickSpeed = parseInt(speedRange.value,10);
+  let startTime = null;
+  let timerId = null;
+  let solvingPath = null;
+
+  function resizeCanvas(){
+    const w = Math.min(800, Math.max(320, Math.floor(window.innerWidth*0.6)));
+    canvas.width = w;
+    canvas.height = w;
+    draw();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function init(){
+    cellCount = Math.max(7, parseInt(sizeRange.value,10));
+    if(cellCount % 2 === 0) cellCount += 1;
+    cols = cellCount;
+    rows = cellCount;
+    cellSize = Math.floor(canvas.width / cols);
+    maze = generateMaze(cols, rows);
+    player = {x:0,y:0};
+    goal = {x:cols-1,y:rows-1};
+    steps = 0;
+    startTime = performance.now();
+    if(timerId) cancelAnimationFrame(timerId);
+    timerId = requestAnimationFrame(updateTimer);
+    solvingPath = null;
+    updateStats();
+    draw();
+  }
+
+  function updateTimer(){
+    const elapsed = (performance.now() - startTime) / 1000;
+    timeEl.textContent = elapsed.toFixed(1) + 's';
+    timerId = requestAnimationFrame(updateTimer);
+  }
+
+  function updateStats(){
+    stepsEl.textContent = steps;
+    sizeLabel.textContent = cols;
+    sizeLabel2.textContent = rows;
+  }
+
+  // Maze generator (DFS backtracker)
+  function generateMaze(w,h){
+    const grid = [];
+    for(let y=0;y<h;y++){
+      grid[y] = [];
+      for(let x=0;x<w;x++){
+        grid[y][x] = {x,y,visited:false,walls:[true,true,true,true]}; // top,right,bottom,left
+      }
+    }
+    function inBounds(x,y){return x>=0 && x<w && y>=0 && y<h;}
+    const stack = [];
+    const start = grid[0][0];
+    start.visited = true;
+    stack.push(start);
+    while(stack.length){
+      const current = stack[stack.length-1];
+      const nx = [];
+      const dirs = [
+        {dx:0,dy:-1,wall:0,opp:2},
+        {dx:1,dy:0,wall:1,opp:3},
+        {dx:0,dy:1,wall:2,opp:0},
+        {dx:-1,dy:0,wall:3,opp:1},
+      ];
+      for(const d of dirs){
+        const x2 = current.x + d.dx, y2 = current.y + d.dy;
+        if(inBounds(x2,y2) && !grid[y2][x2].visited) nx.push({d,x2,y2});
+      }
+      if(nx.length){
+        const pick = nx[Math.floor(Math.random()*nx.length)];
+        const nxt = grid[pick.y2][pick.x2];
+        current.walls[pick.d.wall] = false;
+        nxt.walls[pick.d.opp] = false;
+        nxt.visited = true;
+        stack.push(nxt);
+      } else {
+        stack.pop();
+      }
+    }
+    // make sure start and goal open
+    grid[0][0].walls[3] = false;
+    grid[rows-1][cols-1].walls[1] = false;
+    return grid;
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const cs = Math.floor(canvas.width / cols);
+    // background
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--floor').trim() || '#e8f0ff';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    // draw walls
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--wall').trim() || '#0b3d91';
+    ctx.lineWidth = Math.max(2, cs/12);
+    ctx.lineCap = 'square';
+    for(let y=0;y<rows;y++){
+      for(let x=0;x<cols;x++){
+        const cell = maze[y][x];
+        const px = x*cs, py = y*cs;
+        ctx.beginPath();
+        if(cell.walls[0]){ ctx.moveTo(px,py); ctx.lineTo(px+cs,py); } // top
+        if(cell.walls[1]){ ctx.moveTo(px+cs,py); ctx.lineTo(px+cs,py+cs); } // right
+        if(cell.walls[2]){ ctx.moveTo(px+cs,py+cs); ctx.lineTo(px,py+cs); } // bottom
+        if(cell.walls[3]){ ctx.moveTo(px,py+cs); ctx.lineTo(px,py); } // left
+        ctx.stroke();
+      }
+    }
+    // draw solution path if present
+    if(solvingPath){
+      ctx.fillStyle = 'rgba(46,204,113,0.18)';
+      for(const p of solvingPath){
+        ctx.fillRect(p.x*cs+1, p.y*cs+1, cs-2, cs-2);
+      }
+    }
+    // draw goal
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--goal').trim() || '#2ecc71';
+    ctx.beginPath();
+    ctx.arc(goal.x*cs + cs/2, goal.y*cs + cs/2, cs*0.32, 0, Math.PI*2);
+    ctx.fill();
+    // draw player
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--player').trim() || '#ff6b6b';
+    ctx.beginPath();
+    ctx.arc(player.x*cs + cs/2, player.y*cs + cs/2, cs*0.28, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function canMove(x,y,dir){
+    if(x<0||x>=cols||y<0||y>=rows) return false;
+    const cell = maze[y][x];
+    if(dir==='up' && !cell.walls[0]) return true;
+    if(dir==='right' && !cell.walls[1]) return true;
+    if(dir==='down' && !cell.walls[2]) return true;
+    if(dir==='left' && !cell.walls[3]) return true;
+    return false;
+  }
+
+  function tryMove(dir){
+    const x=player.x, y=player.y;
+    if(!canMove(x,y,dir)) return false;
+    let nx=x, ny=y;
+    if(dir==='up') ny--;
+    if(dir==='down') ny++;
+    if(dir==='left') nx--;
+    if(dir==='right') nx++;
+    player.x = nx; player.y = ny;
+    steps++;
+    updateStats();
+    draw();
+    checkWin();
+    return true;
+  }
+
+  function checkWin(){
+    if(player.x===goal.x && player.y===goal.y){
+      const elapsed = ((performance.now()-startTime)/1000).toFixed(2);
+      setTimeout(()=> alert(`Has guanyat! Temps: ${elapsed}s  Passos: ${steps}`), 80);
+    }
+  }
+
+  // BFS solver to show path
+  function solveMaze(){
+    const q = [];
+    const visited = Array(rows).fill(0).map(()=>Array(cols).fill(false));
+    const parent = Array(rows).fill(0).map(()=>Array(cols).fill(null));
+    q.push({x:player.x,y:player.y});
+    visited[player.y][player.x] = true;
+    while(q.length){
+      const cur = q.shift();
+      if(cur.x===goal.x && cur.y===goal.y){
+        const path = [];
+        let p = cur;
+        while(p){
+          path.push({x:p.x,y:p.y});
+          p = parent[p.y][p.x];
+        }
+        solvingPath = path.reverse();
+        draw();
+        return;
+      }
+      const dirs = [
+        {dir:'up',dx:0,dy:-1},
+        {dir:'right',dx:1,dy:0},
+        {dir:'down',dx:0,dy:1},
+        {dir:'left',dx:-1,dy:0},
+      ];
+      for(const d of dirs){
+        const nx = cur.x + d.dx, ny = cur.y + d.dy;
+        if(nx<0||ny<0||nx>=cols||ny>=rows) continue;
+        // check wall from cur cell
+        if(!canMove(cur.x,cur.y,d.dir)) continue;
+        if(!visited[ny][nx]){
+          visited[ny][nx] = true;
+          parent[ny][nx] = cur;
+          q.push({x:nx,y:ny});
+        }
+      }
+    }
+  }
+
+  // Keyboard
+  let lastMoveAt = 0;
+  window.addEventListener('keydown',(e)=>{
+    const now = performance.now();
+    if(now - lastMoveAt < tickSpeed) return;
+    const k = e.key.toLowerCase();
+    let moved=false;
+    if(k==='arrowup' || k==='w') moved = tryMove('up');
+    if(k==='arrowdown' || k==='s') moved = tryMove('down');
+    if(k==='arrowleft' || k==='a') moved = tryMove('left');
+    if(k==='arrowright' || k==='d') moved = tryMove('right');
+    if(moved) lastMoveAt = now;
+  });
+
+  // Mobile pad
+  padBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=> {
+      const dir = btn.dataset.dir;
+      tryMove(dir);
+    });
+  });
+
+  // UI events
+  restartBtn.addEventListener('click', ()=> {
+    init();
+  });
+  solveBtn.addEventListener('click', ()=> {
+    solveMaze();
+  });
+  sizeRange.addEventListener('input', ()=> {
+    sizeLabel.textContent = sizeRange.value;
+    sizeLabel2.textContent = sizeRange.value;
+  });
+  sizeRange.addEventListener('change', ()=> {
+    init();
+  });
+  speedRange.addEventListener('input', ()=> {
+    tickSpeed = parseInt(speedRange.value,10);
+  });
+
+  // initial
+  resizeCanvas();
+  init();
+})();
+</script>
+</body>
+</html>
