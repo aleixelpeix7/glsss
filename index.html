@@ -14,17 +14,16 @@
       --link-red-hover:#FB2C36;
     }
 
-    html,body{height:100%}
+    html,body{height:100%; margin:0; padding:0;}
+    *,*::before,*::after{box-sizing:border-box}
+
     body {
       background-color: var(--bg);
       font-family: Arial, sans-serif;
       color: var(--accent);
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
     }
 
-    /* 🔝 Barra de navegació estil Aleix El Peix */
+    /* Barra de navegació */
     nav {
       background-color: var(--nav-bg);
       padding: 1rem 2rem;
@@ -42,38 +41,14 @@
       padding: 0;
     }
 
-    nav li.logo {
-      display: flex;
-      align-items: center;
-    }
+    nav li.logo { display: flex; align-items: center; }
+    nav li.logo a { display: flex; align-items: center; text-decoration: none; }
+    nav li.logo img { height: 60px; margin-right: 0.5rem; vertical-align: middle; }
 
-    nav li.logo a {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-    }
+    nav a { color: white; text-decoration: none; font-weight: bold; transition: color 0.3s; }
+    nav a:hover { color: #ffff66; }
 
-    nav li.logo img {
-      height: 60px;
-      margin-right: 0.5rem;
-      vertical-align: middle;
-    }
-
-    nav a {
-      color: white;
-      text-decoration: none;
-      font-weight: bold;
-      transition: color 0.3s;
-    }
-
-    nav a:hover {
-      color: #ffff66;
-    }
-
-    h1 {
-      font-size: 28px;
-      margin: 30px 0 10px 0;
-    }
+    h1 { font-size: 28px; margin: 30px 0 10px 0; }
 
     .enllac {
       font-size: 24px;
@@ -81,14 +56,9 @@
       text-decoration: underline;
       font-weight: bold;
     }
+    .enllac:hover { color: var(--link-red-hover); }
 
-    .enllac:hover {
-      color: var(--link-red-hover);
-    }
-
-    main {
-      padding: 2rem;
-    }
+    main { padding: 2rem; min-height: calc(100vh - 120px); }
 
     /* ---------- Modal primer cop ---------- */
     .fv-backdrop {
@@ -123,6 +93,7 @@
       color: #cfeea6;
       font-weight:700;
       gap:0.75rem;
+      flex: 0 0 auto;
     }
 
     .fv-title { font-size: 16px; }
@@ -137,11 +108,12 @@
       font-size: 14px;
     }
 
+    /* Important: iframe wrap transparent i iframe ocupa tot l'alçada restant */
     .fv-iframe-wrap {
-      background: #fff;
+      background: transparent;
       flex: 1 1 auto;
-      min-height: 320px;
-      display:block;
+      display: block;
+      min-height: 0; /* evita overflow que crea la franja blanca */
     }
 
     .fv-iframe {
@@ -149,6 +121,7 @@
       height: 100%;
       border: 0;
       display:block;
+      background: transparent;
     }
 
     @media (max-width:720px) {
@@ -158,7 +131,7 @@
 </head>
 <body>
 
-  <!-- 🔝 Barra de navegació -->
+  <!-- Barra de navegació -->
   <nav>
     <ul>
       <li class="logo">
@@ -170,7 +143,7 @@
     </ul>
   </nav>
 
-  <!-- 🎮 Contingut principal -->
+  <!-- Contingut principal -->
   <main>
     <h1>Juego de la Serpiente:</h1>
     <a class="enllac" href="https://lagg.netlify.app/serpiente">serpiente</a>
@@ -179,20 +152,18 @@
     <a class="enllac" href="https://lagg.netlify.app/memovisual">Memo-visual</a>
   </main>
 
-  <!-- Modal (renderitzat per JS només si cal) -->
+  <!-- Script del modal -->
   <script>
     (function () {
       var STORAGE_KEY = 'lag_first_visit_form_seen_v1';
       var FORM_SRC = 'https://docs.google.com/forms/d/e/1FAIpQLScto6OpX3isEOp8ARLkUAVU3Sf6m2midTiImK7COD3Zy0He_w/viewform?embedded=true';
 
-      // Si ja l'hem vist, no fem res
       try {
         if (localStorage && localStorage.getItem(STORAGE_KEY)) return;
       } catch (e) {
-        // si localStorage falla, continuem i mostrem modal (no bloquegem)
+        // si localStorage falla, seguim endavant per mostrar el modal
       }
 
-      // Crear elements del modal
       function buildModal() {
         var backdrop = document.createElement('div');
         backdrop.className = 'fv-backdrop';
@@ -226,13 +197,14 @@
         iframe.src = FORM_SRC;
         iframe.title = 'Formulari de LAG';
         iframe.loading = 'lazy';
+        iframe.allow = 'clipboard-read; clipboard-write';
 
         iframeWrap.appendChild(iframe);
         modal.appendChild(header);
         modal.appendChild(iframeWrap);
         backdrop.appendChild(modal);
 
-        // handlers
+        // tancament i control de localStorage
         function close(saveFlag) {
           try {
             if (saveFlag !== false && localStorage) localStorage.setItem(STORAGE_KEY, '1');
@@ -243,31 +215,39 @@
 
         closeBtn.addEventListener('click', function () { close(true); });
 
-        // tancar clicant al backdrop (fora del modal)
         backdrop.addEventListener('click', function (e) {
           if (e.target === backdrop) close(true);
         });
 
-        // Escape per tancar i focus simple
         function onKeyDown(e) {
           if (e.key === 'Escape') { e.preventDefault(); close(true); }
         }
         document.addEventListener('keydown', onKeyDown);
 
-        // focus en el botó de tancar per accessibilitat
+        // Detectem submits mitjançant events load successius
+        // El primer load és la càrrega inicial; després d'enviar el formulari Google Forms fa un nou load amb la pàgina de confirmació
+        var loadCount = 0;
+        iframe.addEventListener('load', function () {
+          loadCount++;
+          // Si veiem més d'un load (normalment 2) tancarem automàticament
+          if (loadCount > 1) {
+            // petites pauses per garantir que la confirmació es mostri abans de tancar
+            setTimeout(function () { close(true); }, 600);
+          }
+        });
+
+        // focus en botó per accessibilitat
         setTimeout(function () { closeBtn.focus(); }, 50);
 
         return backdrop;
       }
 
-      // Mostrem modal un cop DOM carregat
       document.addEventListener('DOMContentLoaded', function () {
         var modal = buildModal();
         document.body.appendChild(modal);
-        // Guardem la clau ara mateix per garantir "només una vegada" encara que l'usuari no tanqui el modal.
+        // Guardem la clau ara mateix per evitar reaparicions encara que l'usuari tanqui la pestanya sense tancar el modal
         try { if (localStorage) localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
       }, { once: true });
-
     })();
   </script>
 </body>
